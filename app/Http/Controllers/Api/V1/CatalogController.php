@@ -103,6 +103,7 @@ class CatalogController extends Controller
     {
         $packages = WashPackage::query()
             ->where('is_active', true)
+            ->with(['addOns' => fn ($q) => $q->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
