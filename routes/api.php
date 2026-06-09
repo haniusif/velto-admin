@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/wash-packages', [CatalogController::class, 'washPackages']);
         Route::get('/coverage/check', [CatalogController::class, 'coverageCheck']);
         Route::get('/availability', [CatalogController::class, 'availability']);
+    });
+
+    // Public ARB/Neoleap payment callbacks (called by the bank, not the app).
+    Route::prefix('payments/arb')->group(function () {
+        Route::match(['get', 'post'], '/callback', [PaymentController::class, 'callback']);
+        Route::match(['get', 'post'], '/error', [PaymentController::class, 'error']);
+        Route::post('/webhook', [PaymentController::class, 'webhook']);
+        Route::get('/done', [PaymentController::class, 'done']);
     });
 
     Route::prefix('auth')->group(function () {

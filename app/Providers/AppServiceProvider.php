@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\ARB\ArbCrypto;
+use App\Services\ARB\ArbGateway;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Support\Facades\Blade;
@@ -12,7 +14,14 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(ArbGateway::class, function ($app): ArbGateway {
+            $config = $app['config']->get('services.arb', []);
+
+            return new ArbGateway(
+                new ArbCrypto((string) ($config['resource_key'] ?? '')),
+                $config,
+            );
+        });
     }
 
     public function boot(): void
