@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\HomeController;
@@ -26,6 +27,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/support', [CatalogController::class, 'support']);
         Route::get('/wash-packages', [CatalogController::class, 'washPackages']);
         Route::get('/coverage/check', [CatalogController::class, 'coverageCheck']);
+        Route::get('/availability', [CatalogController::class, 'availability']);
     });
 
     Route::prefix('auth')->group(function () {
@@ -56,5 +58,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+
+        // Appointments / bookings
+        Route::get('/appointments', [AppointmentController::class, 'index']);
+        Route::post('/appointments', [AppointmentController::class, 'store']);
+        Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
+        Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
+        Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
     });
 });

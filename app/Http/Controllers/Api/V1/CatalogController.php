@@ -8,15 +8,18 @@ use App\Http\Resources\Api\V1\CatalogFaqResource;
 use App\Http\Resources\Api\V1\CatalogLegalPageResource;
 use App\Http\Resources\Api\V1\CatalogVehicleBrandResource;
 use App\Http\Resources\Api\V1\CatalogVehicleColorResource;
+use App\Http\Resources\Api\V1\TimeSlotResource;
 use App\Http\Resources\Api\V1\WashPackageResource;
 use App\Models\AppSetting;
 use App\Models\Country;
 use App\Models\Faq;
 use App\Models\LegalPage;
+use App\Models\TimeSlot;
 use App\Models\VehicleBrand;
 use App\Models\VehicleColor;
 use App\Models\WashPackage;
 use App\Models\Zone;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -110,6 +113,43 @@ class CatalogController extends Controller
 
         return response()->json([
             'data' => WashPackageResource::collection($packages),
+        ]);
+    }
+
+    /** GET /api/v1/catalog/availability?from=&to= → bookable time slots (default today..+14d) */
+    public function availability(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $from = isset($data['from'])
+            ? CarbonImmutable::parse($data['from'])->startOfDay()
+            : CarbonImmutable::today();
+        $to = isset($data['to'])
+            ? CarbonImmutable::parse($data['to'])->startOfDay()
+            : $from->addDays(14);
+
+        // Never offer past dates.
+        $from = $from->max(CarbonImmutable::today());
+
+        $slots = TimeSlot::query()
+            ->where('is_active', true)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('date')
+            ->orderBy('start_time')
+            ->get()
+            // Drop slots whose start time has already passed today.
+            ->filter(function (TimeSlot $slot): bool {
+                $start = CarbonImmutable::parse($slot->date->toDateString().' '.$slot->start_time);
+
+                return $start->isFuture();
+            })
+            ->values();
+
+        return response()->json([
+            'data' => TimeSlotResource::collection($slots),
         ]);
     }
 
