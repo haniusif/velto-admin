@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\WalletController;
+use App\Http\Controllers\Api\V1\WorkerAuthController;
+use App\Http\Controllers\Api\V1\WorkerJobController;
+use App\Http\Controllers\Api\V1\WorkerNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -74,5 +77,32 @@ Route::prefix('v1')->group(function () {
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
         Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
         Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
+    });
+
+    // --- Worker (staff) app -------------------------------------------------
+    Route::prefix('worker')->group(function () {
+        Route::prefix('auth')->group(function () {
+            Route::post('/request-otp', [WorkerAuthController::class, 'requestOtp']);
+            Route::post('/verify-otp', [WorkerAuthController::class, 'verifyOtp']);
+
+            Route::middleware('auth:worker')->group(function () {
+                Route::get('/me', [WorkerAuthController::class, 'me']);
+                Route::post('/logout', [WorkerAuthController::class, 'logout']);
+            });
+        });
+
+        Route::middleware('auth:worker')->group(function () {
+            Route::get('/jobs', [WorkerJobController::class, 'index']);
+            Route::get('/jobs/{appointment}', [WorkerJobController::class, 'show']);
+            Route::post('/jobs/{appointment}/accept', [WorkerJobController::class, 'accept']);
+            Route::post('/jobs/{appointment}/start', [WorkerJobController::class, 'start']);
+            Route::post('/jobs/{appointment}/arrived', [WorkerJobController::class, 'arrived']);
+            Route::post('/jobs/{appointment}/start-work', [WorkerJobController::class, 'startWork']);
+            Route::post('/jobs/{appointment}/complete', [WorkerJobController::class, 'complete']);
+
+            Route::get('/notifications', [WorkerNotificationController::class, 'index']);
+            Route::post('/notifications/{notification}/read', [WorkerNotificationController::class, 'markRead']);
+            Route::post('/notifications/read-all', [WorkerNotificationController::class, 'markAllRead']);
+        });
     });
 });

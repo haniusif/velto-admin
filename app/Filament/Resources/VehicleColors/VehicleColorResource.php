@@ -24,7 +24,7 @@ class VehicleColorResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 2;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('Vehicle colors'); }

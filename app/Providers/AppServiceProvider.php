@@ -54,7 +54,7 @@ class AppServiceProvider extends ServiceProvider
             BLADE),
         );
 
-        // Inject brand fonts (Poppins for Latin, GE SS Two for Arabic) into the
+        // Inject brand fonts (Poppins for Latin, Cairo for Arabic) into the
         // admin panel so every page picks up the Velto identity.
         FilamentView::registerRenderHook(
             'panels::head.end',
@@ -86,29 +86,19 @@ class AppServiceProvider extends ServiceProvider
                         font-weight: 400; font-style: italic; font-display: swap;
                     }
                     @font-face {
-                        font-family: 'GE SS Two';
-                        src: url('/fonts/gess/GESSTwo-Light.otf') format('opentype');
-                        font-weight: 300; font-display: swap;
-                    }
-                    @font-face {
-                        font-family: 'GE SS Two';
-                        src: url('/fonts/gess/GESSTwo-Medium.otf') format('opentype');
-                        font-weight: 500; font-display: swap;
-                    }
-                    @font-face {
-                        font-family: 'GE SS Two';
-                        src: url('/fonts/gess/GESSTwo-Bold.otf') format('opentype');
-                        font-weight: 700; font-display: swap;
+                        font-family: 'Cairo';
+                        src: url('/fonts/cairo/Cairo-Variable.ttf') format('truetype-variations');
+                        font-weight: 200 1000; font-style: normal; font-display: swap;
                     }
 
-                    /* Apply globally; Arabic gets GE SS Two via the dir attribute. */
+                    /* Apply globally; Arabic gets Cairo via the dir attribute. */
                     html, body, .fi-body, .fi-main,
                     [x-data], [wire\:id] {
                         font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
                     }
                     html[lang="ar"], html[lang="ar"] body,
                     html[dir="rtl"], html[dir="rtl"] body {
-                        font-family: 'GE SS Two', 'Poppins', system-ui, sans-serif;
+                        font-family: 'Cairo', 'Poppins', system-ui, sans-serif;
                     }
 
                     /* Filament uses CSS vars for its default font in some places. */
@@ -116,7 +106,7 @@ class AppServiceProvider extends ServiceProvider
                         --font-sans: 'Poppins', system-ui, sans-serif;
                     }
                     html[lang="ar"] :root, html[dir="rtl"] :root {
-                        --font-sans: 'GE SS Two', 'Poppins', system-ui, sans-serif;
+                        --font-sans: 'Cairo', 'Poppins', system-ui, sans-serif;
                     }
                 </style>
             HTML,

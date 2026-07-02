@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\CustomerNotification;
 use App\Models\Vehicle;
@@ -27,18 +28,18 @@ class OverviewStats extends StatsOverviewWidget
             ->where('created_at', '>=', now()->startOfMonth())
             ->sum('amount');
 
-        $bookingsThisMonth = WalletTransaction::where('kind', 'booking')
-            ->where('created_at', '>=', now()->startOfMonth())
+        $bookingsThisMonth = Appointment::where('created_at', '>=', now()->startOfMonth())
             ->count();
+
+        $revenueThisMonth = Appointment::where('payment_status', 'paid')
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->sum('total_price');
 
         $walletFloat = Customer::sum('wallet_balance');
 
         // 7-day sparklines
         $newCustomerSpark = $this->dailyCounts(Customer::query(), 7);
-        $bookingSpark = $this->dailyCounts(
-            WalletTransaction::query()->where('kind', 'booking'),
-            7
-        );
+        $bookingSpark = $this->dailyCounts(Appointment::query(), 7);
         $topUpSpark = $this->dailySums(
             WalletTransaction::query()->where('kind', 'top_up'),
             7
@@ -61,11 +62,19 @@ class OverviewStats extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-truck')
                 ->color('gray'),
 
-            Stat::make(__('Bookings this month'), number_format($bookingsThisMonth))
+            Stat::make(__('Orders this month'), number_format($bookingsThisMonth))
                 ->description(__('Last 7 days'))
                 ->descriptionIcon('heroicon-m-calendar-days')
                 ->color('warning')
                 ->chart($bookingSpark),
+
+            Stat::make(
+                __('Revenue this month'),
+                number_format($revenueThisMonth, 2).' SAR'
+            )
+                ->description(__('Paid orders'))
+                ->descriptionIcon('heroicon-m-banknotes')
+                ->color('success'),
 
             Stat::make(
                 __('Top-ups this month'),

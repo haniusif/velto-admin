@@ -24,7 +24,7 @@ class LegalPageResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static ?int $navigationSort = 34;
+    protected static ?int $navigationSort = 5;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('Legal pages'); }

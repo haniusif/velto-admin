@@ -2,6 +2,7 @@
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Models\Worker;
 
 return [
 
@@ -47,6 +48,10 @@ return [
             'driver' => 'sanctum',
             'provider' => 'customers',
         ],
+        'worker' => [
+            'driver' => 'sanctum',
+            'provider' => 'workers',
+        ],
     ],
 
     /*
@@ -75,6 +80,11 @@ return [
         'customers' => [
             'driver' => 'eloquent',
             'model' => Customer::class,
+        ],
+
+        'workers' => [
+            'driver' => 'eloquent',
+            'model' => Worker::class,
         ],
     ],
 

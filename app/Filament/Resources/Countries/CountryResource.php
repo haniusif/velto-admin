@@ -24,7 +24,7 @@ class CountryResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 32;
+    protected static ?int $navigationSort = 3;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('Countries'); }

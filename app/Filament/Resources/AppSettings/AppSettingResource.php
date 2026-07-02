@@ -24,7 +24,7 @@ class AppSettingResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'key';
 
-    protected static ?int $navigationSort = 35;
+    protected static ?int $navigationSort = 6;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('App settings'); }

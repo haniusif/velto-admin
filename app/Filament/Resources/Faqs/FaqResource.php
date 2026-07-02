@@ -24,7 +24,7 @@ class FaqResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'question';
 
-    protected static ?int $navigationSort = 33;
+    protected static ?int $navigationSort = 4;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('FAQs'); }

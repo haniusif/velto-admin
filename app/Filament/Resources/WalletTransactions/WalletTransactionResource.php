@@ -24,11 +24,11 @@ class WalletTransactionResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'note';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Customer data');
+        return __('Customers');
     }
 
     public static function getNavigationLabel(): string

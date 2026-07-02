@@ -24,7 +24,7 @@ class ZoneResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 12;
+    protected static ?int $navigationSort = 3;
 
     public static function getNavigationGroup(): ?string
     {

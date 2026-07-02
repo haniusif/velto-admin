@@ -24,7 +24,7 @@ class TimeSlotResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'date';
 
-    protected static ?int $navigationSort = 22;
+    protected static ?int $navigationSort = 2;
 
     public static function getNavigationGroup(): ?string
     {
@@ -33,7 +33,7 @@ class TimeSlotResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Time slots');
+        return __('Available time slots');
     }
 
     public static function getModelLabel(): string

@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class WorkerNotification extends Model
+{
+    protected $fillable = [
+        'worker_id',
+        'kind',
+        'title',
+        'title_ar',
+        'body',
+        'body_ar',
+        'data',
+        'read_at',
+    ];
+
+    protected $casts = [
+        'data' => 'array',
+        'read_at' => 'datetime',
+    ];
+
+    public const KIND_ASSIGNED = 'assigned';
+    public const KIND_RESCHEDULED = 'rescheduled';
+    public const KIND_CANCELLED = 'cancelled';
+    public const KIND_REMINDER = 'reminder';
+
+    public function worker(): BelongsTo
+    {
+        return $this->belongsTo(Worker::class);
+    }
+
+    public function scopeUnread($query)
+    {
+        return $query->whereNull('read_at');
+    }
+}

@@ -19,13 +19,13 @@ class AppSettingForm
                 Select::make('type')
                     ->label(__('Type'))
                     ->options([
-                        'string' => 'String',
-                        'text' => 'Text (multiline)',
-                        'url' => 'URL',
-                        'email' => 'Email',
-                        'tel' => 'Telephone',
-                        'bool' => 'Boolean',
-                        'number' => 'Number',
+                        'string' => __('String'),
+                        'text' => __('Text (multiline)'),
+                        'url' => __('URL'),
+                        'email' => __('Email'),
+                        'tel' => __('Telephone'),
+                        'bool' => __('Boolean'),
+                        'number' => __('Number'),
                     ])
                     ->default('string')
                     ->native(false)

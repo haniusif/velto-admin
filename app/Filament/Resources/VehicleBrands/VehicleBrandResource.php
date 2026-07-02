@@ -25,7 +25,7 @@ class VehicleBrandResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 1;
 
     public static function getNavigationGroup(): ?string { return __('Lookups'); }
     public static function getNavigationLabel(): string { return __('Vehicle brands'); }

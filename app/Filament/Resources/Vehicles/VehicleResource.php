@@ -24,11 +24,11 @@ class VehicleResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'plate';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Customer data');
+        return __('Customers');
     }
 
     public static function getNavigationLabel(): string

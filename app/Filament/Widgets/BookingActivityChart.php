@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Appointment;
 use App\Models\TimeSlot;
 use Filament\Widgets\ChartWidget;
 
@@ -31,13 +32,12 @@ class BookingActivityChart extends ChartWidget
             $day = now()->startOfDay()->addDays($i);
             $labels[] = $day->format('D · M d');
 
-            $row = TimeSlot::query()
-                ->whereDate('date', $day->toDateString())
-                ->selectRaw('SUM(capacity) as cap, SUM(booked_count) as bkd')
-                ->first();
+            $cap = TimeSlot::whereDate('date', $day->toDateString())->sum('capacity');
 
-            $capacity[] = (int) ($row->cap ?? 0);
-            $booked[] = (int) ($row->bkd ?? 0);
+            $capacity[] = (int) $cap;
+            $booked[] = (int) Appointment::whereDate('scheduled_at', $day->toDateString())
+                ->where('status', '!=', 'cancelled')
+                ->count();
         }
 
         return [
