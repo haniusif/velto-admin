@@ -8,6 +8,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -19,6 +20,7 @@ class VehicleBrandsTable
         return $table
             ->reorderable('sort_order')
             ->columns([
+                ImageColumn::make('icon_path')->label(__('Icon'))->disk('public')->height(32)->square(),
                 TextColumn::make('name')->label(__('Name'))->searchable()->sortable()
                     ->description(fn ($record) => $record->name_ar),
                 TextColumn::make('slug')->label(__('Slug'))->color('gray')->toggleable(),

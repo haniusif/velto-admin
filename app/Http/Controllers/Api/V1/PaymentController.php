@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\CustomerNotification;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
+use App\Models\WalletTransaction;
 use App\Services\ARB\ArbGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -131,6 +132,13 @@ class PaymentController extends Controller
                     'payment_status' => 'paid',
                 ]);
                 $this->notifyBooked($appointment);
+            } elseif ($payment->purpose === 'wallet_topup') {
+                // Credit the wallet (the create() hook increments wallet_balance).
+                $payment->customer?->walletTransactions()->create([
+                    'kind' => WalletTransaction::KIND_TOP_UP,
+                    'amount' => (float) $payment->amount,
+                    'note' => 'Wallet top-up (card)',
+                ]);
             }
 
             return;

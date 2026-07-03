@@ -16,6 +16,7 @@ class PaymentTransaction extends Model
         'customer_id',
         'appointment_id',
         'gateway',
+        'purpose',
         'action',
         'status',
         'amount',
