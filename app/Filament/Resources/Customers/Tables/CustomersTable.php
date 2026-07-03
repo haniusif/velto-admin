@@ -2,11 +2,16 @@
 
 namespace App\Filament\Resources\Customers\Tables;
 
+use App\Models\Customer;
+use App\Models\WalletTransaction;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -94,6 +99,33 @@ class CustomersTable
                         ->all()),
             ])
             ->recordActions([
+                Action::make('topUp')
+                    ->label(__('Top-up'))
+                    ->icon('heroicon-o-wallet')
+                    ->color('success')
+                    ->modalHeading(__('Top-up'))
+                    ->schema([
+                        TextInput::make('amount')
+                            ->label(__('Amount'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->required()
+                            ->suffix('SAR'),
+                        TextInput::make('note')
+                            ->label(__('Note'))
+                            ->maxLength(255),
+                    ])
+                    ->action(function (Customer $record, array $data): void {
+                        $record->walletTransactions()->create([
+                            'kind' => WalletTransaction::KIND_TOP_UP,
+                            'amount' => (float) $data['amount'],
+                            'note' => $data['note'] ?? 'Manual top-up (admin)',
+                        ]);
+                        Notification::make()->success()
+                            ->title(__('Top-up'))
+                            ->body(number_format((float) $data['amount'], 2).' SAR')
+                            ->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),

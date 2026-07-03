@@ -188,6 +188,9 @@
   "Refund": "استرداد",
   "Refund pending": "استرداد قيد المعالجة",
   "Refunded": "تم الاسترداد",
+  "Refund :amount SAR to the card via ARB? This cannot be undone.": "استرداد :amount ر.س إلى البطاقة عبر ARB؟ لا يمكن التراجع عن العملية.",
+  "Refund failed": "فشل الاسترداد",
+  "Refund processed": "تم تنفيذ الاسترداد",
   "Refunds": "الاستردادات",
   "Result code": "رمز النتيجة",
   "Revenue this month": "إيرادات هذا الشهر",
@@ -269,6 +272,7 @@
   "days": "يوم",
   "e.g. فواحة، معطر": "مثال: فواحة، معطر",
   "min": "دقيقة",
+  "this month": "هذا الشهر",
   "this week": "هذا الأسبوع",
   "total": "الإجمالي"
 }
