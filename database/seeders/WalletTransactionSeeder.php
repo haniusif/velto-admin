@@ -2,35 +2,387 @@
 
 namespace Database\Seeders;
 
-use App\Models\Customer;
-use App\Models\WalletTransaction;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Auto-generated data snapshot for `wallet_transactions` (40 rows).
+ * Regenerated from the live `velto_admin` database.
+ */
 class WalletTransactionSeeder extends Seeder
 {
     public function run(): void
     {
-        Customer::query()->take(5)->get()->each(function (Customer $c) {
-            // Reset to a known starting balance/state for the demo customers.
-            $c->walletTransactions()->delete();
-            $c->update(['wallet_balance' => 0]);
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('wallet_transactions')->truncate();
 
-            $rows = [
-                ['kind' => 'top_up',  'amount' =>  200.00, 'note' => 'Initial top-up', 'days' => 14],
-                ['kind' => 'booking', 'amount' =>  -99.00, 'note' => 'Express wash',   'days' => 10],
-                ['kind' => 'top_up',  'amount' =>  100.00, 'note' => 'Top-up',         'days' =>  6],
-                ['kind' => 'refund',  'amount' =>   25.00, 'note' => 'Late arrival',   'days' =>  3],
-                ['kind' => 'booking', 'amount' =>  -49.00, 'note' => 'Express wash',   'days' =>  1],
-            ];
+        $rows = [
+            [
+                'id' => 1,
+                'customer_id' => 1,
+                'kind' => 'top_up',
+                'amount' => '200.00',
+                'note' => 'Initial top-up',
+                'created_at' => '2026-04-26 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 2,
+                'customer_id' => 1,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-04-30 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 3,
+                'customer_id' => 1,
+                'kind' => 'top_up',
+                'amount' => '100.00',
+                'note' => 'Top-up',
+                'created_at' => '2026-05-04 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 4,
+                'customer_id' => 1,
+                'kind' => 'refund',
+                'amount' => '25.00',
+                'note' => 'Late arrival',
+                'created_at' => '2026-05-07 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 5,
+                'customer_id' => 1,
+                'kind' => 'booking',
+                'amount' => '-49.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-05-09 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 6,
+                'customer_id' => 2,
+                'kind' => 'top_up',
+                'amount' => '200.00',
+                'note' => 'Initial top-up',
+                'created_at' => '2026-04-26 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 7,
+                'customer_id' => 2,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-04-30 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 8,
+                'customer_id' => 2,
+                'kind' => 'top_up',
+                'amount' => '100.00',
+                'note' => 'Top-up',
+                'created_at' => '2026-05-04 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 9,
+                'customer_id' => 2,
+                'kind' => 'refund',
+                'amount' => '25.00',
+                'note' => 'Late arrival',
+                'created_at' => '2026-05-07 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 10,
+                'customer_id' => 2,
+                'kind' => 'booking',
+                'amount' => '-49.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-05-09 18:46:59',
+                'updated_at' => '2026-05-10 18:46:59',
+            ],
+            [
+                'id' => 11,
+                'customer_id' => 3,
+                'kind' => 'top_up',
+                'amount' => '200.00',
+                'note' => 'Initial top-up',
+                'created_at' => '2026-04-26 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 12,
+                'customer_id' => 3,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-04-30 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 13,
+                'customer_id' => 3,
+                'kind' => 'top_up',
+                'amount' => '100.00',
+                'note' => 'Top-up',
+                'created_at' => '2026-05-04 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 14,
+                'customer_id' => 3,
+                'kind' => 'refund',
+                'amount' => '25.00',
+                'note' => 'Late arrival',
+                'created_at' => '2026-05-07 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 15,
+                'customer_id' => 3,
+                'kind' => 'booking',
+                'amount' => '-49.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-05-09 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 16,
+                'customer_id' => 4,
+                'kind' => 'top_up',
+                'amount' => '200.00',
+                'note' => 'Initial top-up',
+                'created_at' => '2026-04-26 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 17,
+                'customer_id' => 4,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-04-30 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 18,
+                'customer_id' => 4,
+                'kind' => 'top_up',
+                'amount' => '100.00',
+                'note' => 'Top-up',
+                'created_at' => '2026-05-04 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 19,
+                'customer_id' => 4,
+                'kind' => 'refund',
+                'amount' => '25.00',
+                'note' => 'Late arrival',
+                'created_at' => '2026-05-07 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 20,
+                'customer_id' => 4,
+                'kind' => 'booking',
+                'amount' => '-49.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-05-09 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 21,
+                'customer_id' => 5,
+                'kind' => 'top_up',
+                'amount' => '200.00',
+                'note' => 'Initial top-up',
+                'created_at' => '2026-04-26 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 22,
+                'customer_id' => 5,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-04-30 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 23,
+                'customer_id' => 5,
+                'kind' => 'top_up',
+                'amount' => '100.00',
+                'note' => 'Top-up',
+                'created_at' => '2026-05-04 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 24,
+                'customer_id' => 5,
+                'kind' => 'refund',
+                'amount' => '25.00',
+                'note' => 'Late arrival',
+                'created_at' => '2026-05-07 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 25,
+                'customer_id' => 5,
+                'kind' => 'booking',
+                'amount' => '-49.00',
+                'note' => 'Express wash',
+                'created_at' => '2026-05-09 18:47:00',
+                'updated_at' => '2026-05-10 18:47:00',
+            ],
+            [
+                'id' => 26,
+                'customer_id' => 10,
+                'kind' => 'top_up',
+                'amount' => '90.00',
+                'note' => null,
+                'created_at' => '2026-05-10 18:58:03',
+                'updated_at' => '2026-05-10 18:59:13',
+            ],
+            [
+                'id' => 27,
+                'customer_id' => 12,
+                'kind' => 'top_up',
+                'amount' => '500.00',
+                'note' => null,
+                'created_at' => '2026-06-09 07:57:08',
+                'updated_at' => '2026-06-09 07:57:08',
+            ],
+            [
+                'id' => 28,
+                'customer_id' => 12,
+                'kind' => 'booking',
+                'amount' => '-114.00',
+                'note' => 'Booking #1 — Express exterior wash',
+                'created_at' => '2026-06-09 07:57:08',
+                'updated_at' => '2026-06-09 07:57:08',
+            ],
+            [
+                'id' => 29,
+                'customer_id' => 12,
+                'kind' => 'refund',
+                'amount' => '114.00',
+                'note' => 'Refund — booking #1 cancelled',
+                'created_at' => '2026-06-09 07:57:09',
+                'updated_at' => '2026-06-09 07:57:09',
+            ],
+            [
+                'id' => 30,
+                'customer_id' => 13,
+                'kind' => 'top_up',
+                'amount' => '500.00',
+                'note' => null,
+                'created_at' => '2026-06-09 07:58:11',
+                'updated_at' => '2026-06-09 07:58:11',
+            ],
+            [
+                'id' => 31,
+                'customer_id' => 13,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Booking #2 — Express exterior wash',
+                'created_at' => '2026-06-09 07:58:11',
+                'updated_at' => '2026-06-09 07:58:11',
+            ],
+            [
+                'id' => 32,
+                'customer_id' => 14,
+                'kind' => 'top_up',
+                'amount' => '300.00',
+                'note' => null,
+                'created_at' => '2026-06-09 08:44:11',
+                'updated_at' => '2026-06-09 08:44:11',
+            ],
+            [
+                'id' => 33,
+                'customer_id' => 14,
+                'kind' => 'booking',
+                'amount' => '-99.00',
+                'note' => 'Booking #3 — Express exterior wash',
+                'created_at' => '2026-06-09 08:44:11',
+                'updated_at' => '2026-06-09 08:44:11',
+            ],
+            [
+                'id' => 34,
+                'customer_id' => 15,
+                'kind' => 'top_up',
+                'amount' => '250.00',
+                'note' => null,
+                'created_at' => '2026-06-09 15:45:01',
+                'updated_at' => '2026-06-09 15:45:01',
+            ],
+            [
+                'id' => 35,
+                'customer_id' => 10,
+                'kind' => 'booking',
+                'amount' => '-20.00',
+                'note' => 'Booking #4 — Express exterior wash',
+                'created_at' => '2026-07-03 06:29:42',
+                'updated_at' => '2026-07-03 06:29:42',
+            ],
+            [
+                'id' => 36,
+                'customer_id' => 10,
+                'kind' => 'booking',
+                'amount' => '-20.00',
+                'note' => 'Booking #5 — Express exterior wash',
+                'created_at' => '2026-07-03 07:45:09',
+                'updated_at' => '2026-07-03 07:45:09',
+            ],
+            [
+                'id' => 37,
+                'customer_id' => 10,
+                'kind' => 'top_up',
+                'amount' => '10.00',
+                'note' => null,
+                'created_at' => '2026-07-03 07:48:47',
+                'updated_at' => '2026-07-03 07:48:47',
+            ],
+            [
+                'id' => 38,
+                'customer_id' => 10,
+                'kind' => 'booking',
+                'amount' => '-20.00',
+                'note' => 'Booking #6 — Express exterior wash',
+                'created_at' => '2026-07-03 08:47:44',
+                'updated_at' => '2026-07-03 08:47:44',
+            ],
+            [
+                'id' => 39,
+                'customer_id' => 10,
+                'kind' => 'top_up',
+                'amount' => '75.00',
+                'note' => 'Wallet top-up (card)',
+                'created_at' => '2026-07-03 08:48:35',
+                'updated_at' => '2026-07-03 08:48:35',
+            ],
+            [
+                'id' => 40,
+                'customer_id' => 10,
+                'kind' => 'refund',
+                'amount' => '20.00',
+                'note' => 'Refund — booking #6 cancelled',
+                'created_at' => '2026-07-03 08:49:26',
+                'updated_at' => '2026-07-03 08:49:26',
+            ],
+        ];
 
-            foreach ($rows as $r) {
-                $tx = $c->walletTransactions()->create([
-                    'kind' => $r['kind'],
-                    'amount' => $r['amount'],
-                    'note' => $r['note'],
-                ]);
-                $tx->update(['created_at' => now()->subDays($r['days'])]);
-            }
-        });
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('wallet_transactions')->insert($chunk);
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

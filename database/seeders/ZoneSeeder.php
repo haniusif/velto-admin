@@ -2,64 +2,49 @@
 
 namespace Database\Seeders;
 
-use App\Models\Area;
-use App\Models\Zone;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Auto-generated data snapshot for `zones` (2 rows).
+ * Regenerated from the live `velto_admin` database.
+ */
 class ZoneSeeder extends Seeder
 {
     public function run(): void
     {
-        $zones = [
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('zones')->truncate();
+
+        $rows = [
             [
-                'area' => 'Olaya',
+                'id' => 1,
+                'area_id' => 1,
                 'name' => 'Olaya Core',
                 'name_ar' => 'قلب العليا',
                 'color' => '#8863E5',
-                'center' => [24.6904, 46.6850],
+                'geometry' => '{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[46.673, 24.6784], [46.697, 24.6784], [46.697, 24.7024], [46.673, 24.7024], [46.673, 24.6784]]]}, "properties": {}}',
+                'is_active' => 1,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-05-10 17:31:05',
             ],
             [
-                'area' => 'Al Malqa',
+                'id' => 2,
+                'area_id' => 2,
                 'name' => 'Al Malqa North',
                 'name_ar' => 'الملقا الشمالية',
                 'color' => '#B38BEE',
-                'center' => [24.8120, 46.6300],
+                'geometry' => '{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[46.618, 24.8], [46.642, 24.8], [46.642, 24.824], [46.618, 24.824], [46.618, 24.8]]]}, "properties": {}}',
+                'is_active' => 1,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-05-10 17:31:05',
             ],
         ];
 
-        foreach ($zones as $row) {
-            $area = Area::where('name', $row['area'])->first();
-            if (! $area) {
-                continue;
-            }
-
-            Zone::updateOrCreate(
-                ['area_id' => $area->id, 'name' => $row['name']],
-                [
-                    'name_ar' => $row['name_ar'],
-                    'color' => $row['color'],
-                    'is_active' => true,
-                    'geometry' => self::squareAround($row['center'][0], $row['center'][1], 0.012),
-                ]
-            );
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('zones')->insert($chunk);
         }
-    }
 
-    private static function squareAround(float $lat, float $lng, float $r): array
-    {
-        return [
-            'type' => 'Feature',
-            'properties' => new \stdClass(),
-            'geometry' => [
-                'type' => 'Polygon',
-                'coordinates' => [[
-                    [$lng - $r, $lat - $r],
-                    [$lng + $r, $lat - $r],
-                    [$lng + $r, $lat + $r],
-                    [$lng - $r, $lat + $r],
-                    [$lng - $r, $lat - $r],
-                ]],
-            ],
-        ];
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

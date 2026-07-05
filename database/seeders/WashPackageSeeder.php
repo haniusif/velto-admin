@@ -2,106 +2,99 @@
 
 namespace Database\Seeders;
 
-use App\Models\PackageAddOn;
-use App\Models\WashPackage;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Auto-generated data snapshot for `wash_packages` (4 rows).
+ * Regenerated from the live `velto_admin` database.
+ */
 class WashPackageSeeder extends Seeder
 {
     public function run(): void
     {
-        $packages = [
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('wash_packages')->truncate();
+
+        $rows = [
             [
+                'id' => 1,
                 'name' => 'Express exterior wash',
                 'name_ar' => 'غسيل خارجي سريع',
                 'description' => 'Full exterior clean using premium products. Gloss finish, dust and grime removed quickly.',
                 'description_ar' => 'تنظيف شامل لجسم السيارة الخارجي باستخدام مواد عالية الجودة تضمن لمعان السيارة وإزالة الأتربة بسرعة.',
                 'type' => 'single',
-                'price' => 20,
+                'price' => '20.00',
                 'duration_minutes' => 30,
+                'visits_count' => null,
+                'validity_days' => null,
+                'image_path' => null,
+                'is_featured' => 0,
+                'is_active' => 1,
                 'sort_order' => 1,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-06-09 16:19:32',
             ],
             [
+                'id' => 2,
                 'name' => 'Interior detail',
                 'name_ar' => 'تنظيف داخلي',
                 'description' => 'Full vacuum, vents, seats, dashboards, glass and leather. Light scent finish.',
                 'description_ar' => 'تنظيف كامل للمقاعد، الأرضيات، الفتحات، الطبلون والزجاج، مع لمسة عطر خفيفة.',
                 'type' => 'single',
-                'price' => 30,
+                'price' => '30.00',
                 'duration_minutes' => 90,
+                'visits_count' => null,
+                'validity_days' => null,
+                'image_path' => null,
+                'is_featured' => 0,
+                'is_active' => 1,
                 'sort_order' => 2,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-06-09 16:19:32',
             ],
             [
+                'id' => 3,
                 'name' => 'Full detail',
                 'name_ar' => 'تنظيف متكامل',
                 'description' => 'Inside and out — seats, floors, dashboard, tires and plastics. Cabin scent of your choice.',
                 'description_ar' => 'يشمل تنظيف السيارة من الخارج والداخل بدقة، بما في ذلك المقاعد والأرضيات والطبلون.',
                 'type' => 'single',
-                'price' => 40,
+                'price' => '40.00',
                 'duration_minutes' => 180,
-                'is_featured' => true,
+                'visits_count' => null,
+                'validity_days' => null,
+                'image_path' => null,
+                'is_featured' => 1,
+                'is_active' => 1,
                 'sort_order' => 3,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-06-09 16:19:32',
             ],
             [
+                'id' => 4,
                 'name' => 'Monthly plan',
                 'name_ar' => 'الباقة الشهرية',
                 'description' => 'Three visits a month with locked-in slots — mix any service each visit.',
                 'description_ar' => 'ثلاث زيارات في الشهر مع إمكانية تغيير الخدمة في كل زيارة، ومواعيد مؤكدة.',
                 'type' => 'multi',
-                'price' => 150,
+                'price' => '150.00',
                 'duration_minutes' => 60,
                 'visits_count' => 3,
                 'validity_days' => 30,
+                'image_path' => null,
+                'is_featured' => 0,
+                'is_active' => 1,
                 'sort_order' => 4,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-06-09 16:19:32',
             ],
         ];
 
-        foreach ($packages as $row) {
-            WashPackage::updateOrCreate(
-                ['name' => $row['name']],
-                $row + ['is_active' => true]
-            );
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('wash_packages')->insert($chunk);
         }
 
-        // Add-ons attached per package
-        $addOnsByPackage = [
-            'Express exterior wash' => [
-                ['name' => 'Tire shine',    'name_ar' => 'تلميع إطارات', 'extra_price' => 15],
-                ['name' => 'Air freshener', 'name_ar' => 'فواحة',        'extra_price' => 10],
-            ],
-            'Interior detail' => [
-                ['name' => 'Premium scent',     'name_ar' => 'معطر فاخر',     'extra_price' => 20],
-                ['name' => 'Air freshener',     'name_ar' => 'فواحة',         'extra_price' => 10],
-                ['name' => 'Leather conditioner','name_ar' => 'علاج الجلد',   'extra_price' => 35],
-            ],
-            'Full detail' => [
-                ['name' => 'Premium scent',     'name_ar' => 'معطر فاخر',     'extra_price' => 20],
-                ['name' => 'Air freshener',     'name_ar' => 'فواحة',         'extra_price' => 10],
-                ['name' => 'Leather conditioner','name_ar' => 'علاج الجلد',   'extra_price' => 35],
-                ['name' => 'Engine bay clean',  'name_ar' => 'تنظيف المحرك',  'extra_price' => 60],
-                ['name' => 'Headlight polish',  'name_ar' => 'تلميع الإضاءة', 'extra_price' => 45],
-            ],
-            'Monthly plan' => [
-                ['name' => 'Premium scent every visit', 'name_ar' => 'معطر فاخر بكل زيارة', 'extra_price' => 60],
-                ['name' => 'Air freshener every visit', 'name_ar' => 'فواحة بكل زيارة',     'extra_price' => 30],
-            ],
-        ];
-
-        foreach ($addOnsByPackage as $packageName => $addOns) {
-            $package = WashPackage::where('name', $packageName)->first();
-            if (! $package) {
-                continue;
-            }
-
-            foreach ($addOns as $i => $row) {
-                PackageAddOn::updateOrCreate(
-                    ['wash_package_id' => $package->id, 'name' => $row['name']],
-                    $row + [
-                        'sort_order' => $i,
-                        'is_active' => true,
-                    ]
-                );
-            }
-        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

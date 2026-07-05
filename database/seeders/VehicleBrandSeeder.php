@@ -2,65 +2,93 @@
 
 namespace Database\Seeders;
 
-use App\Models\VehicleBrand;
-use App\Models\VehicleModelEntry;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Auto-generated data snapshot for `vehicle_brands` (6 rows).
+ * Regenerated from the live `velto_admin` database.
+ */
 class VehicleBrandSeeder extends Seeder
 {
     public function run(): void
     {
-        $brands = [
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('vehicle_brands')->truncate();
+
+        $rows = [
             [
-                'slug' => 'toyota', 'name' => 'Toyota', 'name_ar' => 'تويوتا',
+                'id' => 1,
+                'slug' => 'toyota',
+                'name' => 'Toyota',
+                'name_ar' => 'تويوتا',
                 'icon_path' => 'brands/toyota.svg',
-                'models' => ['Camry', 'Corolla', 'Land Cruiser', 'Hilux', 'RAV4', 'Yaris', 'Prado', 'Avalon'],
+                'sort_order' => 0,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
             [
-                'slug' => 'lexus', 'name' => 'Lexus', 'name_ar' => 'لكزس',
+                'id' => 2,
+                'slug' => 'lexus',
+                'name' => 'Lexus',
+                'name_ar' => 'لكزس',
                 'icon_path' => 'brands/lexus.svg',
-                'models' => ['ES', 'IS', 'LS', 'LX', 'NX', 'RX', 'UX', 'GX'],
+                'sort_order' => 1,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
             [
-                'slug' => 'hyundai', 'name' => 'Hyundai', 'name_ar' => 'هيونداي',
+                'id' => 3,
+                'slug' => 'hyundai',
+                'name' => 'Hyundai',
+                'name_ar' => 'هيونداي',
                 'icon_path' => 'brands/hyundai.svg',
-                'models' => ['Sonata', 'Elantra', 'Accent', 'Tucson', 'Santa Fe', 'Kona', 'Palisade', 'Azera'],
+                'sort_order' => 2,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
             [
-                'slug' => 'nissan', 'name' => 'Nissan', 'name_ar' => 'نيسان',
+                'id' => 4,
+                'slug' => 'nissan',
+                'name' => 'Nissan',
+                'name_ar' => 'نيسان',
                 'icon_path' => 'brands/nissan.svg',
-                'models' => ['Altima', 'Sunny', 'Maxima', 'Patrol', 'X-Trail', 'Sentra', 'Pathfinder', 'Kicks'],
+                'sort_order' => 3,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
             [
-                'slug' => 'mercedes_benz', 'name' => 'Mercedes-Benz', 'name_ar' => 'مرسيدس-بنز',
+                'id' => 5,
+                'slug' => 'mercedes_benz',
+                'name' => 'Mercedes-Benz',
+                'name_ar' => 'مرسيدس-بنز',
                 'icon_path' => 'brands/mercedes_benz.svg',
-                'models' => ['C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'GLS', 'G-Class'],
+                'sort_order' => 4,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
             [
-                'slug' => 'bmw', 'name' => 'BMW', 'name_ar' => 'بي إم دبليو',
+                'id' => 6,
+                'slug' => 'bmw',
+                'name' => 'BMW',
+                'name_ar' => 'بي إم دبليو',
                 'icon_path' => null,
-                'models' => ['3 Series', '5 Series', '7 Series', 'X1', 'X3', 'X5', 'X6', 'X7'],
+                'sort_order' => 5,
+                'is_active' => 1,
+                'created_at' => '2026-05-10 19:19:56',
+                'updated_at' => '2026-05-10 19:19:56',
             ],
         ];
 
-        foreach ($brands as $i => $row) {
-            $brand = VehicleBrand::updateOrCreate(
-                ['slug' => $row['slug']],
-                [
-                    'name' => $row['name'],
-                    'name_ar' => $row['name_ar'],
-                    'icon_path' => $row['icon_path'],
-                    'sort_order' => $i,
-                    'is_active' => true,
-                ]
-            );
-
-            foreach ($row['models'] as $j => $modelName) {
-                VehicleModelEntry::updateOrCreate(
-                    ['vehicle_brand_id' => $brand->id, 'name' => $modelName],
-                    ['sort_order' => $j, 'is_active' => true]
-                );
-            }
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('vehicle_brands')->insert($chunk);
         }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

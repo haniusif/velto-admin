@@ -2,33 +2,54 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
+    /**
+     * Full data snapshot of the `velto_admin` database.
+     * Each child seeder truncates + reinserts its table.
+     *
+     * Framework/transient tables (migrations, sessions, cache, jobs, ...) and
+     * auth artifacts (personal_access_tokens, phone_otps, password_reset_tokens)
+     * are intentionally excluded.
+     */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         $this->call([
-            AdminUserSeeder::class,
+            CountrySeeder::class,
             CitySeeder::class,
             AreaSeeder::class,
             ZoneSeeder::class,
-            WashPackageSeeder::class,
-            TimeSlotSeeder::class,
-            CustomerSeeder::class,
-            WorkerSeeder::class,
             VehicleBrandSeeder::class,
             VehicleColorSeeder::class,
-            CountrySeeder::class,
-            FaqSeeder::class,
-            LegalPageSeeder::class,
-            AppSettingSeeder::class,
+            VehicleModelEntrySeeder::class,
+            WashPackageSeeder::class,
+            PackageAddOnSeeder::class,
+            TimeSlotSeeder::class,
+            UserSeeder::class,
+            RoleSeeder::class,
+            PermissionSeeder::class,
+            ModelHasRoleSeeder::class,
+            ModelHasPermissionSeeder::class,
+            RoleHasPermissionSeeder::class,
+            CustomerSeeder::class,
             VehicleSeeder::class,
+            WorkerSeeder::class,
+            AppointmentSeeder::class,
+            PaymentTransactionSeeder::class,
             WalletTransactionSeeder::class,
             CustomerNotificationSeeder::class,
+            WorkerNotificationSeeder::class,
+            FaqSeeder::class,
+            LegalPageSeeder::class,
+            SliderSeeder::class,
+            AppSettingSeeder::class,
         ]);
+
+        Schema::enableForeignKeyConstraints();
     }
 }
