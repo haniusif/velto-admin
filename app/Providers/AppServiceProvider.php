@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\ARB\ArbCrypto;
 use App\Services\ARB\ArbGateway;
+use BezhanSalleh\LanguageSwitch\Enums\Placement;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
                 ->outsidePanelRoutes([
                     'filament.admin.auth.login',
                 ])
+                ->outsidePanelPlacement(Placement::TopRight)
                 ->circular()
                 ->displayLocale('en');
         });
@@ -199,6 +201,49 @@ class AppServiceProvider extends ServiceProvider
                         font-family: 'Poppins', sans-serif;
                         font-weight: 400; font-size: 1rem; line-height: 1.65;
                         color: rgba(255,255,255,.82);
+                    }
+
+                    /* Language switcher (AR/EN) — pin top-right of the auth screen.
+                       The package wrapper is w-fit + fixed with no inline offset,
+                       so it defaults to the top-left; anchor it to the end side. */
+                    .fls-display-on.fixed {
+                        inset-inline-start: auto;
+                        inset-inline-end: 0;
+                        padding: 1.15rem 1.35rem;
+                    }
+                    /* The package trigger's Tailwind utilities aren't compiled into
+                       the panel CSS, so style the pill explicitly (theme-aware). */
+                    .fls-display-on > div { background: transparent !important; }
+                    .fls-display-on .language-switch-trigger {
+                        width: auto;
+                        height: 2.4rem;
+                        min-width: 2.4rem;
+                        padding: 0 .95rem;
+                        border-radius: 999px;
+                        font-weight: 600;
+                        font-size: .9rem;
+                        letter-spacing: .01em;
+                        background: rgba(136, 99, 229, .12);
+                        color: #6d4fd0;
+                        border: 1px solid rgba(136, 99, 229, .28);
+                        box-shadow: 0 8px 18px -10px rgba(88, 99, 229, .55);
+                        transition: background .15s ease, border-color .15s ease;
+                    }
+                    .fls-display-on .language-switch-trigger:hover {
+                        background: rgba(136, 99, 229, .2);
+                        border-color: rgba(136, 99, 229, .45);
+                    }
+                    @media (prefers-color-scheme: dark) {
+                        .fls-display-on .language-switch-trigger {
+                            background: rgba(136, 99, 229, .2);
+                            color: #cbb8f6;
+                            border-color: rgba(136, 99, 229, .4);
+                        }
+                    }
+                    :is(.dark, [data-theme="dark"]) .fls-display-on .language-switch-trigger {
+                        background: rgba(136, 99, 229, .2);
+                        color: #cbb8f6;
+                        border-color: rgba(136, 99, 229, .4);
                     }
 
                     /* Small screens: drop the brand pane, keep a soft tinted canvas */
