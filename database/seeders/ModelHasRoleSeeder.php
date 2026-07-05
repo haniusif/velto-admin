@@ -6,8 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Auto-generated data snapshot for `model_has_roles` (2 rows).
- * Regenerated from the live `velto_admin` database.
+ * Grants super_admin (role_id 1) to the sole admin (user id 1).
  */
 class ModelHasRoleSeeder extends Seeder
 {
@@ -21,11 +20,6 @@ class ModelHasRoleSeeder extends Seeder
                 'role_id' => 1,
                 'model_type' => 'App\\Models\\User',
                 'model_id' => 1,
-            ],
-            [
-                'role_id' => 1,
-                'model_type' => 'App\\Models\\User',
-                'model_id' => 2,
             ],
         ];
 
