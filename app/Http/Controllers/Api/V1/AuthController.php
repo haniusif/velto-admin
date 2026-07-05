@@ -46,9 +46,9 @@ class AuthController extends Controller
 
         $smsConfigured = $this->sms->isConfigured();
 
-        // Real SMS path → code derived from current minute+hour (mmHH). Offline dev (no creds) → backdoor 1111.
+        // Real SMS path → fixed code 1234. Offline dev (no creds) → backdoor 1111.
         $code = $smsConfigured
-            ? date('iH')
+            ? '1234'
             : '1111';
 
         DB::table('phone_otps')->insert([
