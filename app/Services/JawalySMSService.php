@@ -44,6 +44,13 @@ class JawalySMSService
 
         $url = $this->baseUrl.'account/area/sms/send';
 
+        // 4jawaly expects bare international digits (e.g. 9665xxxxxxxx) — a
+        // leading '+' or spaces cause the message to be rejected server-side.
+        $numbers = array_values(array_filter(array_map(
+            static fn (string $n): string => preg_replace('/\D+/', '', $n) ?? '',
+            $numbers,
+        ), static fn (string $n): bool => $n !== ''));
+
         $payload = [
             'messages' => [[
                 'text' => $message,
@@ -81,11 +88,64 @@ class JawalySMSService
 
         curl_close($ch);
 
+        $body = json_decode((string) $response, true);
+
+        // A 2xx from 4jawaly is necessary but NOT sufficient: the provider
+        // returns 200 even when a message is rejected (bad sender, no balance,
+        // invalid number). The real outcome lives in the body, so inspect it —
+        // otherwise a silent delivery failure looks like success.
+        $httpOk = $status >= 200 && $status < 300;
+        $success = $httpOk && $this->bodyIndicatesSuccess($body);
+
+        if (! $success) {
+            Log::warning('Jawaly SMS not delivered', [
+                'status' => $status,
+                'response' => $body,
+            ]);
+        }
+
         return [
-            'success' => $status >= 200 && $status < 300,
+            'success' => $success,
             'status' => $status,
-            'response' => json_decode((string) $response, true),
+            'response' => $body,
         ];
+    }
+
+    /**
+     * Interpret a 4jawaly send response. Treats explicit failure signals
+     * (success=false, total_failed>0, total_success==0, per-message err_text)
+     * as failures. When the body carries no recognisable status fields, it
+     * defers to the HTTP status the caller already checked.
+     *
+     * @param  mixed  $body
+     */
+    private function bodyIndicatesSuccess($body): bool
+    {
+        if (! is_array($body)) {
+            // Non-JSON / empty body on a 2xx — can't confirm, don't assume.
+            return false;
+        }
+
+        if (array_key_exists('success', $body)) {
+            return (bool) $body['success'] && (int) ($body['total_failed'] ?? 0) === 0;
+        }
+
+        if (array_key_exists('total_failed', $body) && (int) $body['total_failed'] > 0) {
+            return false;
+        }
+
+        if (array_key_exists('total_success', $body)) {
+            return (int) $body['total_success'] > 0;
+        }
+
+        foreach ((array) ($body['messages'] ?? []) as $msg) {
+            if (! empty($msg['err_text'])) {
+                return false;
+            }
+        }
+
+        // No known status fields present — fall back to the HTTP 2xx result.
+        return true;
     }
 
     public function isConfigured(): bool
