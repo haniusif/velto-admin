@@ -76,6 +76,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
         Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
+        Route::post('/appointments/{appointment}/pay', [AppointmentController::class, 'pay']);
         Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
     });
 

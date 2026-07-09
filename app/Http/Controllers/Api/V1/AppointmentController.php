@@ -125,6 +125,78 @@ class AppointmentController extends Controller
         return response()->json(['data' => new AppointmentResource($appointment)]);
     }
 
+    /**
+     * POST /api/v1/me/appointments/{appointment}/pay
+     *
+     * Re-issue a card payment token for a pending booking whose payment was
+     * never completed. The slot is already held, so we only mint a fresh ARB
+     * purchase token and hand back a new hosted-page URL.
+     */
+    public function pay(Request $request, Appointment $appointment): JsonResponse
+    {
+        $this->authorizeOwn($request, $appointment);
+
+        if (! $appointment->canPay()) {
+            throw ValidationException::withMessages([
+                'appointment' => ['This booking is not awaiting payment.'],
+            ]);
+        }
+
+        if (! $this->arb->isConfigured()) {
+            throw ValidationException::withMessages([
+                'payment_method' => ['Card payment is not available yet. Please pay with your wallet.'],
+            ]);
+        }
+
+        $customer = $request->user();
+
+        $payment = PaymentTransaction::create([
+            'customer_id' => $customer->id,
+            'appointment_id' => $appointment->id,
+            'gateway' => 'arb',
+            'action' => 'purchase',
+            'status' => PaymentTransaction::STATUS_PENDING,
+            'amount' => (float) $appointment->total_price,
+            'currency' => 'SAR',
+            'track_id' => (string) $appointment->id,
+        ]);
+
+        try {
+            $token = $this->arb->createPurchaseToken([
+                'amount' => (float) $appointment->total_price,
+                'track_id' => $payment->track_id,
+                'response_url' => $this->callbackUrl('callback'),
+                'error_url' => $this->callbackUrl('error'),
+                'lang' => $customer->preferred_language,
+                'customer_ip' => $request->ip(),
+            ]);
+        } catch (\Throwable $e) {
+            $payment->update([
+                'status' => PaymentTransaction::STATUS_FAILED,
+                'error_text' => mb_substr($e->getMessage(), 0, 250),
+            ]);
+            Log::warning('ARB token re-issue failed', ['appointment' => $appointment->id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Could not start card payment. Please try again.',
+            ], 502);
+        }
+
+        $payment->update(['payment_id' => $token['payment_id']]);
+        $appointment->load(self::WITH);
+
+        return response()->json([
+            'data' => [
+                'appointment' => new AppointmentResource($appointment),
+                'payment' => [
+                    'method' => $appointment->payment_method,
+                    'status' => 'pending',
+                    'payment_page_url' => $token['payment_url'],
+                ],
+            ],
+        ]);
+    }
+
     /** PATCH /api/v1/me/appointments/{appointment}/reschedule */
     public function reschedule(Request $request, Appointment $appointment): JsonResponse
     {

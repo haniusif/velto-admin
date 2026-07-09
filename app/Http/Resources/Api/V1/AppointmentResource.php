@@ -71,6 +71,7 @@ class AppointmentResource extends JsonResource
 
             'can_cancel' => $this->resource->isActionable(),
             'can_reschedule' => $this->resource->isActionable(),
+            'can_pay' => $this->resource->canPay(),
 
             'notes' => $this->notes,
             'cancelled_at' => optional($this->cancelled_at)?->toIso8601String(),

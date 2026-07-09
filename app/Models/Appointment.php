@@ -151,6 +151,20 @@ class Appointment extends Model
             && $this->scheduled_at->isFuture();
     }
 
+    /**
+     * A card booking left pending because payment was never completed (the
+     * customer abandoned the hosted page). Its slot is still held, so payment
+     * can be retried while the slot is in the future.
+     */
+    public function canPay(): bool
+    {
+        return $this->status === self::STATUS_PENDING
+            && $this->payment_method !== 'wallet'
+            && $this->payment_status === 'pending'
+            && $this->scheduled_at !== null
+            && $this->scheduled_at->isFuture();
+    }
+
     // --- worker job lifecycle -------------------------------------------
 
     /** Worker may acknowledge an assigned, still-active job once. */
