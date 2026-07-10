@@ -8,6 +8,7 @@ use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class VehicleController extends Controller
 {
@@ -73,6 +74,26 @@ class VehicleController extends Controller
         });
 
         return response()->json(['data' => new VehicleResource($vehicle->fresh())]);
+    }
+
+    /**
+     * POST /api/v1/me/vehicles/photo
+     *
+     * Upload a vehicle photo to the public disk and return its URL. The client
+     * then saves the returned url/path as `photo_url` on create/update.
+     */
+    public function photo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+        ]);
+
+        $path = $request->file('photo')->store('vehicle-photos', 'public');
+
+        return response()->json(['data' => [
+            'path' => $path,
+            'url' => Storage::disk('public')->url($path),
+        ]], 201);
     }
 
     private function validated(Request $request, bool $isUpdate = false): array

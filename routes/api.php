@@ -57,6 +57,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:customer')->prefix('me')->group(function () {
         // Vehicles
         Route::get('/vehicles', [VehicleController::class, 'index']);
+        Route::post('/vehicles/photo', [VehicleController::class, 'photo']);
         Route::post('/vehicles', [VehicleController::class, 'store']);
         Route::patch('/vehicles/{vehicle}', [VehicleController::class, 'update']);
         Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
