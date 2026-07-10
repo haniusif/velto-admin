@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
@@ -158,7 +159,7 @@ class AppointmentController extends Controller
             'status' => PaymentTransaction::STATUS_PENDING,
             'amount' => (float) $appointment->total_price,
             'currency' => 'SAR',
-            'track_id' => (string) $appointment->id,
+            'track_id' => $this->bookingTrackId($appointment),
         ]);
 
         try {
@@ -370,7 +371,7 @@ class AppointmentController extends Controller
                 'status' => PaymentTransaction::STATUS_PENDING,
                 'amount' => $b['total'],
                 'currency' => 'SAR',
-                'track_id' => (string) $appointment->id,
+                'track_id' => $this->bookingTrackId($appointment),
             ]);
 
             return [$appointment, $payment];
@@ -521,6 +522,18 @@ class AppointmentController extends Controller
 
         // Couldn't auto-refund — flag for manual handling via the merchant portal.
         $appointment->update(['payment_status' => 'refund_pending']);
+    }
+
+    /**
+     * A merchant track id that is unique across the gateway's whole history.
+     * The sequential appointment id collides in long-lived environments (the
+     * gateway rejects a reused track id), so append a random suffix — matching
+     * the wallet top-up scheme. The callback matches the payment by this stored
+     * value, so the format is free.
+     */
+    private function bookingTrackId(Appointment $appointment): string
+    {
+        return 'BK-'.$appointment->id.'-'.Str::upper(Str::random(10));
     }
 
     private function callbackUrl(string $type): string
