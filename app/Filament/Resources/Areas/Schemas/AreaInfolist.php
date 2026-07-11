@@ -30,7 +30,7 @@ class AreaInfolist
                             ->label('')
                             ->columnSpanFull()
                             ->extraStyles(['min-height: 360px', 'border-radius: 16px'])
-                            ->defaultLocation([24.7136, 46.6753])
+                            ->defaultLocation(24.7136, 46.6753)
                             ->zoom(13)
                             ->showMarker(true)
                             ->markerColor('#8863E5')

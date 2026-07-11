@@ -53,7 +53,7 @@ class CityForm
                         Map::make('location')
                             ->label('')
                             ->columnSpanFull()
-                            ->defaultLocation([24.7136, 46.6753]) // Riyadh
+                            ->defaultLocation(24.7136, 46.6753) // Riyadh
                             ->zoom(11)
                             ->draggable()
                             ->clickable(true)

@@ -31,7 +31,7 @@ class ZoneInfolist
                             ->label('')
                             ->columnSpanFull()
                             ->extraStyles(['min-height: 480px', 'border-radius: 16px'])
-                            ->defaultLocation([24.7136, 46.6753])
+                            ->defaultLocation(24.7136, 46.6753)
                             ->zoom(11)
                             ->showMarker(false)
                             ->geoMan(true)

@@ -59,7 +59,7 @@ class AreaForm
                         Map::make('location')
                             ->label('')
                             ->columnSpanFull()
-                            ->defaultLocation([24.7136, 46.6753])
+                            ->defaultLocation(24.7136, 46.6753)
                             ->zoom(13)
                             ->draggable()
                             ->clickable(true)

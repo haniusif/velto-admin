@@ -75,7 +75,7 @@ class ZoneForm
                         Map::make('geometry')
                             ->label('')
                             ->columnSpanFull()
-                            ->defaultLocation([24.7136, 46.6753])
+                            ->defaultLocation(24.7136, 46.6753)
                             ->zoom(11)
                             ->draggable()
                             ->showZoomControl()
