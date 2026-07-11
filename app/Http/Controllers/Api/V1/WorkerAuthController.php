@@ -54,8 +54,9 @@ class WorkerAuthController extends Controller
 
         $smsConfigured = $this->sms->isConfigured();
 
-        // Real SMS path → random code. Offline dev (no creds) → backdoor 1111.
-        $code = $smsConfigured ? (string) random_int(1000, 9999) : '1111';
+        // Real SMS path → fixed code 1234 (test phase, matches the customer app).
+        // Offline dev (no creds) → backdoor 1111.
+        $code = $smsConfigured ? '1234' : '1111';
 
         DB::table('phone_otps')->insert([
             'phone' => $phone,
