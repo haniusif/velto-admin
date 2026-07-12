@@ -13,7 +13,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 
 class TimeSlotsTable
 {
