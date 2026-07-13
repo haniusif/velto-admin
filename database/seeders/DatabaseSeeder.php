@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             ZoneSeeder::class,
             VehicleBrandSeeder::class,
             VehicleColorSeeder::class,
+            VehicleCategorySeeder::class,
             VehicleModelEntrySeeder::class,
             WashPackageSeeder::class,
             PackageAddOnSeeder::class,
