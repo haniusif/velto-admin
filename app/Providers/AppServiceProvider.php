@@ -57,8 +57,9 @@ class AppServiceProvider extends ServiceProvider
             BLADE),
         );
 
-        // Inject brand fonts (Poppins for Latin, Cairo for Arabic) into the
-        // admin panel so every page picks up the Velto identity.
+        // Inject brand fonts into the admin panel. Cairo is the primary
+        // typeface everywhere (it carries both Latin and Arabic glyphs);
+        // Poppins stays registered as a fallback.
         FilamentView::registerRenderHook(
             'panels::head.end',
             fn (): string => <<<'HTML'
@@ -94,21 +95,14 @@ class AppServiceProvider extends ServiceProvider
                         font-weight: 200 1000; font-style: normal; font-display: swap;
                     }
 
-                    /* Apply globally; Arabic gets Cairo via the dir attribute. */
+                    /* Cairo everywhere (Latin + Arabic), Poppins as fallback. */
                     html, body, .fi-body, .fi-main,
                     [x-data], [wire\:id] {
-                        font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-                    }
-                    html[lang="ar"], html[lang="ar"] body,
-                    html[dir="rtl"], html[dir="rtl"] body {
-                        font-family: 'Cairo', 'Poppins', system-ui, sans-serif;
+                        font-family: 'Cairo', 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
                     }
 
                     /* Filament uses CSS vars for its default font in some places. */
                     :root {
-                        --font-sans: 'Poppins', system-ui, sans-serif;
-                    }
-                    html[lang="ar"] :root, html[dir="rtl"] :root {
                         --font-sans: 'Cairo', 'Poppins', system-ui, sans-serif;
                     }
                 </style>

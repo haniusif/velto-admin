@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::hex('#8863E5'),
             ])
             ->brandName('Velto Admin')
-            ->font('Poppins', provider: LocalFontProvider::class)
+            ->font('Cairo', provider: LocalFontProvider::class)
             ->darkMode()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -48,6 +48,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make(fn (): string => __('Locations'))->collapsed(),
                 NavigationGroup::make(fn (): string => __('Team & access'))->collapsed(),
                 NavigationGroup::make(fn (): string => __('Lookups'))->collapsed(),
+                NavigationGroup::make(fn (): string => __('Settings'))->collapsed(),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
