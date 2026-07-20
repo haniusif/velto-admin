@@ -1,95 +1,110 @@
 <x-filament-panels::page>
-    <div wire:ignore x-data="coverageMapPage" x-init="init()" dir="rtl">
+    <style>
+        .cm-scope{--cm-card:#fff;--cm-border:rgba(17,24,39,.08);--cm-fg:#111827;--cm-muted:#6b7280;--cm-hover:#f9fafb;--cm-input:#fff;--cm-track:#cbd5e1;}
+        .dark .cm-scope{--cm-card:rgba(255,255,255,.05);--cm-border:rgba(255,255,255,.1);--cm-fg:#fff;--cm-muted:#9ca3af;--cm-hover:rgba(255,255,255,.05);--cm-input:rgba(255,255,255,.05);--cm-track:rgba(255,255,255,.2);}
+        .cm-scope{display:flex;flex-direction:column;gap:16px;}
+        .cm-tiles{display:flex;flex-wrap:wrap;gap:12px;}
+        .cm-tile{flex:1 1 160px;background:var(--cm-card);border:1px solid var(--cm-border);border-radius:12px;padding:16px;}
+        .cm-tile-num{font-size:26px;font-weight:800;line-height:1.1;color:var(--cm-fg);}
+        .cm-tile-num.green{color:#16a34a;}
+        .cm-tile-label{margin-top:4px;font-size:13px;color:var(--cm-muted);}
+        .cm-bar{margin-top:10px;height:6px;width:100%;overflow:hidden;border-radius:999px;background:var(--cm-track);}
+        .cm-bar-fill{height:100%;border-radius:999px;background:#22c55e;transition:width .3s;}
+        .cm-actions{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:1 1 160px;background:var(--cm-card);border:1px solid var(--cm-border);border-radius:12px;padding:16px;}
+        .cm-btn{border:none;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+        .cm-btn-green{background:#16a34a;color:#fff;}.cm-btn-green:hover{background:#15803d;}
+        .cm-btn-muted{background:var(--cm-hover);color:var(--cm-fg);border:1px solid var(--cm-border);}
+        .cm-main{display:flex;flex-wrap:wrap;gap:16px;}
+        .cm-map-card{position:relative;flex:1 1 420px;min-width:300px;overflow:hidden;border-radius:12px;border:1px solid var(--cm-border);}
+        .cm-map{height:72vh;width:100%;background:#e5e7eb;}
+        .cm-legend{position:absolute;bottom:12px;inset-inline-start:12px;display:flex;gap:16px;align-items:center;background:var(--cm-card);border:1px solid var(--cm-border);border-radius:10px;padding:6px 12px;font-size:12px;color:var(--cm-fg);box-shadow:0 2px 8px rgba(0,0,0,.12);}
+        .cm-legend span{display:inline-flex;align-items:center;gap:6px;}
+        .cm-dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+        .cm-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(229,231,235,.75);color:var(--cm-muted);font-size:14px;}
+        .cm-panel{display:flex;flex-direction:column;flex:0 1 340px;min-width:270px;max-height:72vh;overflow:hidden;background:var(--cm-card);border:1px solid var(--cm-border);border-radius:12px;}
+        .cm-panel-head{padding:12px;border-bottom:1px solid var(--cm-border);}
+        .cm-search-wrap{position:relative;}
+        .cm-search{width:100%;box-sizing:border-box;border:1px solid var(--cm-border);background:var(--cm-input);color:var(--cm-fg);border-radius:10px;padding:9px 36px 9px 12px;font-size:14px;}
+        .cm-search:focus{outline:none;border-color:#8863E5;box-shadow:0 0 0 2px rgba(136,99,229,.25);}
+        .cm-search-icon{position:absolute;inset-inline-end:10px;top:9px;color:var(--cm-muted);}
+        .cm-hint{margin-top:8px;font-size:12px;color:var(--cm-muted);}
+        .cm-list{flex:1;overflow-y:auto;}
+        .cm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-bottom:1px solid var(--cm-border);}
+        .cm-row:hover{background:var(--cm-hover);}
+        .cm-row-name{flex:1;text-align:start;font-size:14px;color:var(--cm-fg);background:none;border:none;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0;}
+        .cm-switch{position:relative;width:36px;height:20px;flex-shrink:0;border:none;border-radius:999px;background:var(--cm-track);cursor:pointer;padding:0;transition:background .15s;}
+        .cm-switch.on{background:#22c55e;}
+        .cm-knob{position:absolute;top:2px;inset-inline-end:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s;}
+        .cm-switch.on .cm-knob{transform:translateX(-16px);}
+        .dark .cm-switch.on .cm-knob{transform:translateX(-16px);}
+        .cm-empty{padding:24px;text-align:center;color:var(--cm-muted);font-size:14px;}
+        .cm-error{margin-top:12px;border-radius:10px;background:rgba(239,68,68,.1);color:#b91c1c;padding:12px;font-size:14px;}
+        @keyframes cm-spin{to{transform:rotate(360deg)}}
+        .cm-spin{width:18px;height:18px;border:2px solid rgba(136,99,229,.3);border-top-color:#8863E5;border-radius:50%;animation:cm-spin .8s linear infinite;}
+    </style>
+
+    <div class="cm-scope" wire:ignore x-data="coverageMapPage" x-init="init()" dir="rtl">
 
         {{-- Stat tiles --}}
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-xl bg-white p-4 ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                <div class="text-2xl font-bold text-gray-950 dark:text-white" x-text="total"></div>
-                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">إجمالي الأحياء</div>
+        <div class="cm-tiles">
+            <div class="cm-tile">
+                <div class="cm-tile-num" x-text="total"></div>
+                <div class="cm-tile-label">إجمالي الأحياء</div>
             </div>
-            <div class="rounded-xl bg-white p-4 ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                <div class="text-2xl font-bold text-green-600 dark:text-green-500" x-text="coveredCount"></div>
-                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">مغطّى</div>
+            <div class="cm-tile">
+                <div class="cm-tile-num green" x-text="coveredCount"></div>
+                <div class="cm-tile-label">مغطّى</div>
             </div>
-            <div class="rounded-xl bg-white p-4 ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                <div class="text-2xl font-bold text-gray-950 dark:text-white"><span x-text="percent"></span>%</div>
-                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">نسبة التغطية</div>
-                <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                    <div class="h-full rounded-full bg-green-500 transition-all" :style="`width:${percent}%`"></div>
-                </div>
+            <div class="cm-tile">
+                <div class="cm-tile-num"><span x-text="percent"></span>%</div>
+                <div class="cm-tile-label">نسبة التغطية</div>
+                <div class="cm-bar"><div class="cm-bar-fill" :style="`width:${percent}%`"></div></div>
             </div>
-            <div class="flex flex-col justify-center gap-2 rounded-xl bg-white p-4 ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                <button type="button" @click="coverAll(true)"
-                    class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
-                    تغطية الكل
-                </button>
-                <button type="button" @click="coverAll(false)"
-                    class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/20">
-                    إلغاء الكل
-                </button>
+            <div class="cm-actions">
+                <button type="button" class="cm-btn cm-btn-green" @click="coverAll(true)">تغطية الكل</button>
+                <button type="button" class="cm-btn cm-btn-muted" @click="coverAll(false)">إلغاء الكل</button>
             </div>
         </div>
 
         {{-- Map + side panel --}}
-        <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
-
-            {{-- Map --}}
-            <div class="relative overflow-hidden rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10">
-                <div x-ref="map" style="height:74vh;width:100%;background:#e5e7eb"></div>
-
-                {{-- Legend overlay --}}
-                <div class="pointer-events-none absolute bottom-3 left-3 flex items-center gap-4 rounded-lg bg-white/90 px-3 py-2 text-xs shadow ring-1 ring-gray-950/5 backdrop-blur dark:bg-gray-900/90 dark:ring-white/10">
-                    <span class="flex items-center gap-1.5"><span class="inline-block h-3 w-3 rounded-full" style="background:#16a34a"></span> مغطّى</span>
-                    <span class="flex items-center gap-1.5"><span class="inline-block h-3 w-3 rounded-full" style="background:#9ca3af"></span> غير مغطّى</span>
+        <div class="cm-main">
+            <div class="cm-map-card">
+                <div class="cm-map" x-ref="map"></div>
+                <div class="cm-legend">
+                    <span><span class="cm-dot" style="background:#16a34a"></span> مغطّى</span>
+                    <span><span class="cm-dot" style="background:#9ca3af"></span> غير مغطّى</span>
                 </div>
-
-                {{-- Loading overlay --}}
-                <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-gray-100/80 text-sm text-gray-500 dark:bg-gray-900/80">
-                    <svg class="mr-2 h-5 w-5 animate-spin text-primary-500" viewBox="0 0 24 24" fill="none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"></path>
-                    </svg>
-                    جارٍ تحميل الخريطة…
+                <div class="cm-loading" x-show="loading">
+                    <span class="cm-spin"></span> جارٍ تحميل الخريطة…
                 </div>
             </div>
 
-            {{-- Side panel: searchable district list --}}
-            <div class="flex max-h-[74vh] flex-col overflow-hidden rounded-xl bg-white ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                <div class="border-b border-gray-100 p-3 dark:border-white/10">
-                    <div class="relative">
-                        <input x-model="search" type="search" placeholder="ابحث عن حي…"
-                            class="w-full rounded-lg border-gray-300 bg-white py-2 pr-9 pl-3 text-sm text-gray-950 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/10 dark:bg-white/5 dark:text-white">
-                        <svg class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <div class="cm-panel">
+                <div class="cm-panel-head">
+                    <div class="cm-search-wrap">
+                        <input class="cm-search" type="search" x-model="search" placeholder="ابحث عن حي…">
+                        <svg class="cm-search-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.45 4.39l3.08 3.08a1 1 0 01-1.42 1.42l-3.08-3.08A7 7 0 012 9z" clip-rule="evenodd"/>
                         </svg>
                     </div>
-                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span x-text="filtered.length"></span> حي · اضغط على الاسم للانتقال إليه على الخريطة
-                    </div>
+                    <div class="cm-hint"><span x-text="filtered.length"></span> حي · اضغط على الاسم للانتقال إليه</div>
                 </div>
-
-                <div class="flex-1 overflow-y-auto">
+                <div class="cm-list">
                     <template x-for="d in filtered" :key="d.id">
-                        <div class="flex items-center justify-between gap-2 border-b border-gray-50 px-3 py-2 last:border-0 hover:bg-gray-50 dark:border-white/5 dark:hover:bg-white/5">
-                            <button type="button" @click="focus(d.id)"
-                                class="flex-1 truncate text-right text-sm text-gray-800 dark:text-gray-200"
-                                x-text="d.name"></button>
-                            <button type="button" @click="toggle(d.id)" role="switch" :aria-checked="d.covered"
-                                :class="d.covered ? 'bg-green-500' : 'bg-gray-300 dark:bg-white/20'"
-                                class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors">
-                                <span :class="d.covered ? 'translate-x-[-18px]' : 'translate-x-[-2px]'"
-                                    class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"></span>
+                        <div class="cm-row">
+                            <button type="button" class="cm-row-name" @click="focus(d.id)" x-text="d.name"></button>
+                            <button type="button" class="cm-switch" :class="{ on: d.covered }"
+                                    role="switch" :aria-checked="d.covered" @click="toggle(d.id)">
+                                <span class="cm-knob"></span>
                             </button>
                         </div>
                     </template>
-                    <div x-show="filtered.length === 0" class="p-6 text-center text-sm text-gray-400">
-                        لا توجد نتائج
-                    </div>
+                    <div class="cm-empty" x-show="filtered.length === 0">لا توجد نتائج</div>
                 </div>
             </div>
         </div>
 
-        <p x-show="error" x-cloak class="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10" x-text="error"></p>
+        <p class="cm-error" x-show="error" x-cloak x-text="error"></p>
     </div>
 
     @push('scripts')
@@ -145,7 +160,7 @@
                                 await loadGoogleMaps(window.__coverageKey);
                                 this.draw();
                             } catch (e) {
-                                this.error = 'تعذّر تحميل خرائط Google — تحقّق من مفتاح الـ API وصلاحياته لنطاق velto.test.';
+                                this.error = 'تعذّر تحميل خرائط Google — تحقّق من مفتاح الـ API وصلاحياته لهذا النطاق.';
                             }
                             this.loading = false;
                         },
