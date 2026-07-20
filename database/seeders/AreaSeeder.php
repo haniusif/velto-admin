@@ -160,6 +160,28 @@ class AreaSeeder extends Seeder
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
+            [
+                'id' => 14,
+                'city_id' => 1,
+                'name' => 'Al Mahdiyah',
+                'name_ar' => 'المهدية',
+                'latitude' => '24.6320000',
+                'longitude' => '46.6280000',
+                'is_active' => 1,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-05-10 17:30:31',
+            ],
+            [
+                'id' => 15,
+                'city_id' => 1,
+                'name' => 'Irqah',
+                'name_ar' => 'عرقة',
+                'latitude' => '24.7100000',
+                'longitude' => '46.5600000',
+                'is_active' => 1,
+                'created_at' => '2026-05-10 17:30:31',
+                'updated_at' => '2026-05-10 17:30:31',
+            ],
         ];
 
         foreach (array_chunk($rows, 200) as $chunk) {

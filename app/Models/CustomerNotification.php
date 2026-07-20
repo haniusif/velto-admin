@@ -23,6 +23,7 @@ class CustomerNotification extends Model
         'read_at' => 'datetime',
     ];
 
+    public const KIND_WELCOME = 'welcome';
     public const KIND_BOOKING = 'booking';
     public const KIND_ON_THE_WAY = 'on_the_way';
     public const KIND_ARRIVED = 'arrived';

@@ -11,7 +11,9 @@ use App\Http\Resources\Api\V1\CatalogVehicleColorResource;
 use App\Http\Resources\Api\V1\TimeSlotResource;
 use App\Http\Resources\Api\V1\WashPackageResource;
 use App\Models\AppSetting;
+use App\Models\City;
 use App\Models\Country;
+use App\Models\District;
 use App\Models\Faq;
 use App\Models\LegalPage;
 use App\Models\TimeSlot;
@@ -153,6 +155,55 @@ class CatalogController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/catalog/coverage → cities we serve, each split into
+     * active districts (areas with at least one active zone) and upcoming
+     * districts (active areas not yet covered). Only cities with at least one
+     * active district are returned. Names ordered alphabetically.
+     */
+    public function coverage(): JsonResponse
+    {
+        $covered = District::query()
+            ->where('is_covered', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'name_ar']);
+
+        if ($covered->isEmpty()) {
+            return response()->json(['data' => []]);
+        }
+
+        return response()->json([
+            'data' => [[
+                'city' => 'Riyadh',
+                'city_ar' => 'الرياض',
+                'active' => $covered
+                    ->map(fn (District $d) => [
+                        'name' => $d->name,
+                        'name_ar' => $d->name_ar ?? $d->name,
+                    ])
+                    ->values(),
+                'upcoming' => [],
+            ]],
+        ]);
+    }
+
+    /** GET /api/v1/catalog/coverage/zones → covered districts with GeoJSON geometry for map overlay */
+    public function coverageZones(): JsonResponse
+    {
+        $districts = District::query()
+            ->where('is_covered', true)
+            ->get()
+            ->map(fn (District $d) => [
+                'id' => $d->id,
+                'name' => $d->name,
+                'name_ar' => $d->name_ar ?? $d->name,
+                'color' => '#8863E5',
+                'geometry' => $d->geometry,
+            ]);
+
+        return response()->json(['data' => $districts]);
+    }
+
     /** GET /api/v1/catalog/coverage/check?lat=&lng= → returns matching zone id/name or null */
     public function coverageCheck(Request $request): JsonResponse
     {
@@ -163,28 +214,21 @@ class CatalogController extends Controller
 
         $point = [(float) $data['lng'], (float) $data['lat']];
 
-        $zones = Zone::query()
-            ->where('is_active', true)
-            ->whereNotNull('geometry')
-            ->with('area:id,name,name_ar,city_id')
-            ->get();
+        $districts = District::query()->where('is_covered', true)->get();
 
-        foreach ($zones as $zone) {
-            if ($this->pointInGeometry($point, $zone->geometry)) {
+        foreach ($districts as $district) {
+            if ($this->pointInGeometry($point, $district->geometry)) {
+                $entry = [
+                    'id' => $district->id,
+                    'name' => $district->name,
+                    'name_ar' => $district->name_ar ?? $district->name,
+                ];
+
                 return response()->json([
                     'data' => [
                         'covered' => true,
-                        'zone' => [
-                            'id' => $zone->id,
-                            'name' => $zone->name,
-                            'name_ar' => $zone->name_ar,
-                            'color' => $zone->color,
-                        ],
-                        'area' => $zone->area ? [
-                            'id' => $zone->area->id,
-                            'name' => $zone->area->name,
-                            'name_ar' => $zone->area->name_ar,
-                        ] : null,
+                        'zone' => $entry + ['color' => '#8863E5'],
+                        'area' => $entry,
                     ],
                 ]);
             }

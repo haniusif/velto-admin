@@ -49,6 +49,7 @@ class DatabaseSeeder extends Seeder
             LegalPageSeeder::class,
             SliderSeeder::class,
             AppSettingSeeder::class,
+            DistrictSeeder::class,
         ]);
 
         Schema::enableForeignKeyConstraints();

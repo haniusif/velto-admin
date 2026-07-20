@@ -351,7 +351,10 @@ class AppointmentController extends Controller
             ]);
         }
 
-        // Reserve the slot and create the booking as pending before redirecting.
+        // Create the booking as pending BEFORE redirecting to pay. The slot is
+        // NOT reserved here — a booking only consumes a seat once payment is
+        // captured (see PaymentController::applyResult). We still validate the
+        // slot is currently bookable so the user gets immediate feedback.
         [$appointment, $payment] = DB::transaction(function () use ($customer, $b, $data) {
             $slot = $this->lockBookableSlot($data['time_slot_id']);
 
@@ -361,7 +364,6 @@ class AppointmentController extends Controller
                 paymentMethod: $data['payment_method'],
                 paymentStatus: 'pending',
             ));
-            $slot->increment('booked_count');
 
             $payment = PaymentTransaction::create([
                 'customer_id' => $customer->id,
@@ -387,9 +389,9 @@ class AppointmentController extends Controller
                 'customer_ip' => $request->ip(),
             ]);
         } catch (\Throwable $e) {
-            // Compensate: free the slot and void the pending booking/payment.
+            // Compensate: void the pending booking/payment. No slot to release —
+            // the seat is only taken on payment capture.
             DB::transaction(function () use ($appointment, $payment, $e) {
-                $this->releaseSlot($appointment->time_slot_id);
                 $appointment->update([
                     'status' => Appointment::STATUS_CANCELLED,
                     'cancelled_at' => now(),
@@ -458,6 +460,118 @@ class AppointmentController extends Controller
     }
 
     /** Lock a bookable slot row and validate it; throws on unavailable/full/past. */
+    /**
+     * POST /me/appointments/{appointment}/verify-payment
+     * Ask Neoleap directly for the transaction's real state (never trust the
+     * redirect `status`), then settle the booking accordingly. Idempotent and
+     * safe to call repeatedly / concurrently with the bank callback.
+     */
+    public function verifyPayment(Request $request, Appointment $appointment): JsonResponse
+    {
+        abort_unless($appointment->customer_id === $request->user()?->id, 404);
+
+        if ($appointment->status === Appointment::STATUS_PENDING && $this->arb->isConfigured()) {
+            $payment = PaymentTransaction::where('appointment_id', $appointment->id)
+                ->where('gateway', 'arb')
+                ->latest('id')
+                ->first();
+
+            if ($payment && $payment->status !== PaymentTransaction::STATUS_CAPTURED) {
+                try {
+                    $inq = $this->arb->inquire([
+                        'track_id' => $payment->track_id,
+                        'payment_id' => $payment->payment_id,
+                        'trans_id' => $payment->trans_id,
+                    ]);
+
+                    if (($inq['found'] ?? false) && $inq['captured']) {
+                        $this->settlePaidBooking($appointment, $payment, $inq);
+                    } elseif (($inq['found'] ?? false) && ! $inq['captured']) {
+                        $this->settleFailedBooking($appointment, $payment, $inq);
+                    }
+                    // Not found / still processing → leave pending; the cron and
+                    // the bank callback remain the fallback.
+                } catch (\Throwable $e) {
+                    Log::warning('ARB inquiry failed', [
+                        'appointment' => $appointment->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json([
+            'data' => new AppointmentResource($appointment->fresh()->load(self::WITH)),
+        ]);
+    }
+
+    /** Confirm a booking whose payment Neoleap reports as captured (consumes the seat now). */
+    private function settlePaidBooking(Appointment $appointment, PaymentTransaction $payment, array $inq): void
+    {
+        DB::transaction(function () use ($appointment, $payment, $inq) {
+            $fresh = Appointment::lockForUpdate()->find($appointment->id);
+            if (! $fresh || $fresh->status !== Appointment::STATUS_PENDING) {
+                return; // already settled by the callback — stay idempotent
+            }
+
+            $payment->update([
+                'status' => PaymentTransaction::STATUS_CAPTURED,
+                'trans_id' => $inq['trans_id'] ?? $payment->trans_id,
+                'ref' => $inq['ref'] ?? $payment->ref,
+                'result_code' => $inq['result'] ?? null,
+            ]);
+
+            $slot = $fresh->time_slot_id
+                ? TimeSlot::lockForUpdate()->find($fresh->time_slot_id)
+                : null;
+
+            if ($slot && $slot->booked_count >= $slot->capacity) {
+                $fresh->customer?->walletTransactions()->create([
+                    'kind' => WalletTransaction::KIND_REFUND,
+                    'amount' => (float) $payment->amount,
+                    'note' => "Refund — booking #{$fresh->id}: time slot no longer available",
+                ]);
+                $fresh->update([
+                    'status' => Appointment::STATUS_CANCELLED,
+                    'payment_status' => 'refunded',
+                    'cancelled_at' => now(),
+                ]);
+
+                return;
+            }
+
+            $slot?->increment('booked_count');
+            $fresh->update([
+                'status' => Appointment::STATUS_CONFIRMED,
+                'payment_status' => 'paid',
+            ]);
+        });
+
+        $settled = $appointment->fresh();
+        if ($settled?->status === Appointment::STATUS_CONFIRMED) {
+            $this->notifyBooked($settled->customer, $settled);
+        }
+    }
+
+    /** Cancel a booking whose payment Neoleap reports as not captured. */
+    private function settleFailedBooking(Appointment $appointment, PaymentTransaction $payment, array $inq): void
+    {
+        DB::transaction(function () use ($appointment, $payment, $inq) {
+            $fresh = Appointment::lockForUpdate()->find($appointment->id);
+            if (! $fresh || $fresh->status !== Appointment::STATUS_PENDING) {
+                return;
+            }
+            $payment->update([
+                'status' => PaymentTransaction::STATUS_FAILED,
+                'result_code' => $inq['result'] ?? null,
+            ]);
+            $fresh->update([
+                'status' => Appointment::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+            ]);
+        });
+    }
+
     private function lockBookableSlot(int $slotId): TimeSlot
     {
         $slot = TimeSlot::where('is_active', true)->lockForUpdate()->find($slotId);

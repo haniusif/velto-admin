@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Models\Customer;
+use App\Models\CustomerNotification;
 use App\Services\JawalySMSService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -172,11 +173,18 @@ class AuthController extends Controller
 
         $customer->fill($data);
 
+        // Detect first-time registration completion so we can welcome them once.
+        $justCompleted = false;
         if (! $customer->profile_completed && filled($customer->name) && filled($customer->city)) {
             $customer->profile_completed = true;
+            $justCompleted = true;
         }
 
         $customer->save();
+
+        if ($justCompleted) {
+            $this->sendWelcomeNotification($customer);
+        }
 
         return response()->json([
             'data' => new CustomerResource($customer->fresh()),
@@ -204,6 +212,23 @@ class AuthController extends Controller
         return response()->json([
             'data' => new CustomerResource($customer->fresh()),
         ]);
+    }
+
+    /**
+     * Create a one-time welcome notification for a newly registered customer.
+     * Idempotent: never adds a second welcome even if profile is re-completed.
+     */
+    private function sendWelcomeNotification(Customer $customer): void
+    {
+        $customer->customerNotifications()->firstOrCreate(
+            ['kind' => CustomerNotification::KIND_WELCOME],
+            [
+                'title' => 'Welcome to Velto 🎉',
+                'title_ar' => 'أهلًا بك في فيلتو 🎉',
+                'body' => "Hi {$customer->name}, your account is ready. Book your first mobile car wash today!",
+                'body_ar' => "مرحبًا {$customer->name}، حسابك جاهز. احجز أول غسيل متنقل لسيارتك اليوم!",
+            ],
+        );
     }
 
     private function normalizePhone(string $phone): string

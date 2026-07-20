@@ -150,6 +150,55 @@ class ArbGateway
         ];
     }
 
+    /**
+     * Authoritative transaction status inquiry (action 8). Ask Neoleap directly
+     * for the real state instead of trusting the browser redirect's `status`.
+     * Reference a transaction by transId / paymentId / trackId.
+     *
+     * @return array{found:bool, captured:bool, result:?string, trans_id:?string, ref:?string, payment_id:?string, track_id:?string, amt:?string, raw:array}
+     */
+    public function inquire(array $opts): array
+    {
+        $trandata = [
+            'id' => $this->config['tranportal_id'],
+            'password' => $this->config['tranportal_password'],
+            'action' => self::ACTION_INQUIRY,
+            'currencyCode' => (string) $this->config['currency_code'],
+        ];
+        if (! empty($opts['trans_id'])) {
+            $trandata['transId'] = (string) $opts['trans_id'];
+            $trandata['udf5'] = 'TRANID';
+        }
+        if (! empty($opts['payment_id'])) {
+            $trandata['paymentId'] = (string) $opts['payment_id'];
+        }
+        if (! empty($opts['track_id'])) {
+            $trandata['trackId'] = (string) $opts['track_id'];
+        }
+
+        $endpoint = $this->config['admin_url'] ?: $this->config['pg_url'];
+
+        $response = $this->send($endpoint, [
+            'id' => $this->config['tranportal_id'],
+            'trandata' => $this->crypto->encrypt($this->encodePayload($trandata)),
+        ], null);
+
+        $row = $this->decryptResponseRow($response);
+        $result = $row['result'] ?? null;
+
+        return [
+            'found' => filled($result),
+            'captured' => in_array($result, ['CAPTURED', 'APPROVED'], true),
+            'result' => $result,
+            'trans_id' => $row['transId'] ?? null,
+            'ref' => $row['ref'] ?? null,
+            'payment_id' => $row['paymentId'] ?? null,
+            'track_id' => $row['trackId'] ?? null,
+            'amt' => $row['amt'] ?? null,
+            'raw' => $row,
+        ];
+    }
+
     // --- internals -------------------------------------------------------
 
     private function send(string $url, array $body, ?string $customerIp): array

@@ -30,6 +30,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/legal/{slug}', [CatalogController::class, 'legal']);
         Route::get('/support', [CatalogController::class, 'support']);
         Route::get('/wash-packages', [CatalogController::class, 'washPackages']);
+        Route::get('/coverage', [CatalogController::class, 'coverage']);
+        Route::get('/coverage/zones', [CatalogController::class, 'coverageZones']);
         Route::get('/coverage/check', [CatalogController::class, 'coverageCheck']);
         Route::get('/availability', [CatalogController::class, 'availability']);
     });
@@ -78,6 +80,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
         Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
         Route::post('/appointments/{appointment}/pay', [AppointmentController::class, 'pay']);
+        Route::post('/appointments/{appointment}/verify-payment', [AppointmentController::class, 'verifyPayment']);
         Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
     });
 

@@ -127,11 +127,7 @@ class PaymentController extends Controller
             ]);
 
             if ($appointment && $appointment->status === Appointment::STATUS_PENDING) {
-                $appointment->update([
-                    'status' => Appointment::STATUS_CONFIRMED,
-                    'payment_status' => 'paid',
-                ]);
-                $this->notifyBooked($appointment);
+                $this->confirmPaidAppointment($appointment, $payment);
             } elseif ($payment->purpose === 'wallet_topup') {
                 // Credit the wallet (the create() hook increments wallet_balance).
                 $payment->customer?->walletTransactions()->create([
@@ -151,19 +147,56 @@ class PaymentController extends Controller
             'response_payload' => $parsed['raw'],
         ]);
 
+        // Declined / failed → cancel the pending booking. No slot to free: a seat
+        // is only consumed on capture, never held for an unpaid booking.
         if ($appointment && $appointment->status === Appointment::STATUS_PENDING) {
-            DB::transaction(function () use ($appointment) {
-                if ($appointment->time_slot_id) {
-                    $slot = TimeSlot::lockForUpdate()->find($appointment->time_slot_id);
-                    if ($slot && $slot->booked_count > 0) {
-                        $slot->decrement('booked_count');
-                    }
-                }
+            $appointment->update([
+                'status' => Appointment::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Payment captured → consume the seat now (never before). Re-checks capacity
+     * under a row lock; if the slot filled up while the customer was paying, the
+     * charge is refunded to their wallet and the booking is cancelled.
+     */
+    private function confirmPaidAppointment(Appointment $appointment, PaymentTransaction $payment): void
+    {
+        DB::transaction(function () use ($appointment, $payment) {
+            $slot = $appointment->time_slot_id
+                ? TimeSlot::lockForUpdate()->find($appointment->time_slot_id)
+                : null;
+
+            if ($slot && $slot->booked_count >= $slot->capacity) {
+                // Race: last seat taken by another paid booking. Refund + cancel.
+                $appointment->customer?->walletTransactions()->create([
+                    'kind' => WalletTransaction::KIND_REFUND,
+                    'amount' => (float) $payment->amount,
+                    'note' => "Refund — booking #{$appointment->id}: time slot no longer available",
+                ]);
                 $appointment->update([
                     'status' => Appointment::STATUS_CANCELLED,
+                    'payment_status' => 'refunded',
                     'cancelled_at' => now(),
                 ]);
-            });
+                Log::warning('Paid booking refunded — slot full at capture', [
+                    'appointment' => $appointment->id,
+                ]);
+
+                return;
+            }
+
+            $slot?->increment('booked_count');
+            $appointment->update([
+                'status' => Appointment::STATUS_CONFIRMED,
+                'payment_status' => 'paid',
+            ]);
+        });
+
+        if ($appointment->fresh()?->status === Appointment::STATUS_CONFIRMED) {
+            $this->notifyBooked($appointment);
         }
     }
 

@@ -97,6 +97,16 @@ class AppSettingSeeder extends Seeder
                 'created_at' => '2026-05-10 19:19:57',
                 'updated_at' => '2026-05-10 19:19:57',
             ],
+            [
+                'id' => 9,
+                'group' => 'booking',
+                'key' => 'booking.pending_grace_minutes',
+                'label' => 'مهلة إلغاء الحجز غير المدفوع (دقائق)',
+                'value' => '30',
+                'type' => 'number',
+                'created_at' => '2026-05-10 19:19:57',
+                'updated_at' => '2026-05-10 19:19:57',
+            ],
         ];
 
         foreach (array_chunk($rows, 200) as $chunk) {
