@@ -1,5 +1,32 @@
 <?php
 
+// Al Rajhi Bank / Neoleap payment gateway — test vs live environments.
+// Switch the active environment with ARB_MODE=test|live in .env. Endpoints
+// default per environment; credentials are issued by ARB (test via onboarding
+// mail, live via the merchant portal: Merchant process → View Plugin Details
+// → View). The active set is flattened into services.arb so ArbGateway keeps
+// reading tranportal_id / tranportal_password / resource_key / pg_url / admin_url.
+$arbMode = env('ARB_MODE', 'test') === 'live' ? 'live' : 'test';
+
+$arbEnvironments = [
+    'test' => [
+        'tranportal_id' => env('ARB_TEST_TRANPORTAL_ID', env('ARB_TRANPORTAL_ID')),
+        'tranportal_password' => env('ARB_TEST_TRANPORTAL_PASSWORD', env('ARB_TRANPORTAL_PASSWORD')),
+        'resource_key' => env('ARB_TEST_RESOURCE_KEY', env('ARB_RESOURCE_KEY')),
+        'pg_url' => env('ARB_TEST_PG_URL', env('ARB_PG_URL', 'https://securepayments.neoleap.com.sa/pg/payment/hosted.htm')),
+        'admin_url' => env('ARB_TEST_PG_ADMIN_URL', env('ARB_PG_ADMIN_URL', 'https://securepayments.neoleap.com.sa/pg/payment/tranportal.htm')),
+    ],
+    'live' => [
+        'tranportal_id' => env('ARB_LIVE_TRANPORTAL_ID'),
+        'tranportal_password' => env('ARB_LIVE_TRANPORTAL_PASSWORD'),
+        'resource_key' => env('ARB_LIVE_RESOURCE_KEY'),
+        'pg_url' => env('ARB_LIVE_PG_URL', 'https://digitalpayments.neoleap.com.sa/pg/payment/hosted.htm'),
+        'admin_url' => env('ARB_LIVE_PG_ADMIN_URL', 'https://digitalpayments.neoleap.com.sa/pg/payment/tranportal.htm'),
+    ],
+];
+
+$arbActive = $arbEnvironments[$arbMode];
+
 return [
 
     'google_maps' => [
@@ -45,19 +72,17 @@ return [
         'sender' => env('JAWALY_SENDER', 'Velto'),
     ],
 
-    // Al Rajhi Bank / Neoleap payment gateway (REST, Bank Hosted). Credentials
-    // are issued by ARB via onboarding mail / merchant portal.
-    'arb' => [
-        'tranportal_id' => env('ARB_TRANPORTAL_ID'),
-        'tranportal_password' => env('ARB_TRANPORTAL_PASSWORD'),
-        'resource_key' => env('ARB_RESOURCE_KEY'), // 32-char AES-256 key
-        // Payment-token generation endpoint (sandbox differs — comes via mail).
-        'pg_url' => env('ARB_PG_URL', 'https://securepayments.alrajhibank.com.sa/pg/payment/tranportal.htm'),
-        // Inquiry/Void/Refund/Capture endpoint (defaults to the same host).
-        'admin_url' => env('ARB_PG_ADMIN_URL'),
+    // Al Rajhi Bank / Neoleap payment gateway (REST, Bank Hosted). The active
+    // environment (test|live) resolves from ARB_MODE above; its credentials and
+    // endpoints are merged in here alongside the mode-independent settings.
+    'arb' => array_merge($arbActive, [
+        'mode' => $arbMode,                          // 'test' | 'live'
+        'terminal_id' => env('ARB_TERMINAL_ID'),     // live: PG718400
+        'merchant_id' => env('ARB_MERCHANT_ID'),     // live: 600006300
         'currency_code' => env('ARB_CURRENCY_CODE', '682'), // SAR
         // Public base URL ARB can reach for redirect/webhook (e.g. a tunnel in dev).
         'callback_base' => env('ARB_CALLBACK_BASE', env('APP_URL')),
-    ],
+        'environments' => $arbEnvironments,
+    ]),
 
 ];
