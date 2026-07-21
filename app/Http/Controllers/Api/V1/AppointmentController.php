@@ -482,6 +482,7 @@ class AppointmentController extends Controller
                         'track_id' => $payment->track_id,
                         'payment_id' => $payment->payment_id,
                         'trans_id' => $payment->trans_id,
+                        'amount' => $payment->amount,
                     ]);
 
                     if (($inq['found'] ?? false) && $inq['captured']) {

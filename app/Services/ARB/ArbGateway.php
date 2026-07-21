@@ -166,15 +166,27 @@ class ArbGateway
             'action' => self::ACTION_INQUIRY,
             'currencyCode' => (string) $this->config['currency_code'],
         ];
-        if (! empty($opts['trans_id'])) {
-            $trandata['transId'] = (string) $opts['trans_id'];
-            $trandata['udf5'] = 'TRANID';
+        // v1.31 marks amt mandatory for supporting transactions; without it the
+        // gateway rejects the inquiry with IPAY0100023 "Missing Transaction Amount".
+        if (isset($opts['amount'])) {
+            $trandata['amt'] = $this->formatAmount((float) $opts['amount']);
         }
-        if (! empty($opts['payment_id'])) {
-            $trandata['paymentId'] = (string) $opts['payment_id'];
-        }
+        // Always carry the merchant track id. The reference to look up is passed
+        // in `transId` and `udf5` names which kind of reference it is — one of
+        // TRANID / PaymentID / TrackID (v1.31 "Based on TransID/PaymentID/TrackID").
+        // Prefer the gateway transId, then paymentId, then fall back to trackId.
         if (! empty($opts['track_id'])) {
             $trandata['trackId'] = (string) $opts['track_id'];
+        }
+        if (! empty($opts['trans_id'])) {
+            $trandata['udf5'] = 'TRANID';
+            $trandata['transId'] = (string) $opts['trans_id'];
+        } elseif (! empty($opts['payment_id'])) {
+            $trandata['udf5'] = 'PaymentID';
+            $trandata['transId'] = (string) $opts['payment_id'];
+        } elseif (! empty($opts['track_id'])) {
+            $trandata['udf5'] = 'TrackID';
+            $trandata['transId'] = (string) $opts['track_id'];
         }
 
         $endpoint = $this->config['admin_url'] ?: $this->config['pg_url'];
