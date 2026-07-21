@@ -8,6 +8,7 @@ namespace App\Support;
  */
 final class DispatchState
 {
+    public const SCHEDULED = 'scheduled';           // future booking; dispatch deferred to lead time
     public const WAITING = 'waiting';               // no eligible worker; queued for retry
     public const AUTO_ASSIGNING = 'auto_assigning'; // strategy resolving a candidate
     public const OFFERED = 'offered';               // offer sent, countdown live

@@ -16,7 +16,7 @@ class DispatchSettings
 
     private const DEFAULTS = [
         'mode' => 'direct',                  // direct | offer
-        'default_strategy' => 'least_loaded',
+        'default_strategy' => 'auto',        // weighted scoring (Phase 2)
         'auto_dispatch_enabled' => true,
         'require_online' => false,           // Phase 1: workers may not toggle duty yet
         'immediate_threshold_minutes' => 90,
@@ -28,6 +28,12 @@ class DispatchSettings
         'distance_radius_km' => 15,
         'reject_cooldown_count' => 3,
         'reject_cooldown_hours' => 1,
+        'scoring_weights' => '{"distance":0.30,"workload":0.25,"jobs_today":0.15,"rating":0.10,"acceptance":0.10,"same_zone":0.05,"preferred":0.05}',
+    ];
+
+    private const DEFAULT_WEIGHTS = [
+        'distance' => 0.30, 'workload' => 0.25, 'jobs_today' => 0.15,
+        'rating' => 0.10, 'acceptance' => 0.10, 'same_zone' => 0.05, 'preferred' => 0.05,
     ];
 
     /** @var array<string,mixed> */
@@ -78,5 +84,18 @@ class DispatchSettings
     public function usesOffers(): bool
     {
         return $this->string('mode') === 'offer';
+    }
+
+    /** @return array<string,float> scoring weights (config-overridable, merged with defaults). */
+    public function weights(): array
+    {
+        $raw = $this->values['scoring_weights'] ?? null;
+
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : null;
+        }
+
+        return is_array($raw) ? array_merge(self::DEFAULT_WEIGHTS, $raw) : self::DEFAULT_WEIGHTS;
     }
 }

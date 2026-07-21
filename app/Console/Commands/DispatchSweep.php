@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Appointment;
 use App\Models\AssignmentOffer;
 use App\Services\Dispatch\DispatchService;
+use App\Services\Dispatch\DispatchSettings;
 use App\Support\DispatchState;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +22,7 @@ class DispatchSweep extends Command
 
     protected $description = 'Expire stale offers and retry waiting-assignment jobs';
 
-    public function handle(DispatchService $dispatch): int
+    public function handle(DispatchService $dispatch, DispatchSettings $settings): int
     {
         Cache::put('velto.dispatch.last_sweep', now()->timestamp);
 
@@ -47,7 +48,22 @@ class DispatchSweep extends Command
             $dispatch->dispatch($appointment);
         }
 
-        $this->info("Sweep: expired {$overdue->count()} offer(s), retried {$waiting->count()} waiting job(s).");
+        // 3) Fire scheduled jobs whose lead time has arrived (backstop for a
+        // missed delayed ScheduledDispatch job / a server restart).
+        $lead = $settings->int('dispatch_lead_minutes');
+        $due = Appointment::query()
+            ->where('dispatch_state', DispatchState::SCHEDULED)
+            ->whereNull('worker_id')
+            ->whereIn('status', Appointment::ACTIVE_STATUSES)
+            ->where('scheduled_at', '<=', now()->addMinutes($lead))
+            ->limit(200)
+            ->get();
+
+        foreach ($due as $appointment) {
+            $dispatch->dispatch($appointment);
+        }
+
+        $this->info("Sweep: expired {$overdue->count()} offer(s), retried {$waiting->count()} waiting, fired {$due->count()} scheduled.");
 
         return self::SUCCESS;
     }

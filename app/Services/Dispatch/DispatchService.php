@@ -3,6 +3,7 @@
 namespace App\Services\Dispatch;
 
 use App\Jobs\ExpireOffer;
+use App\Jobs\ScheduledDispatch;
 use App\Models\Appointment;
 use App\Models\AssignmentOffer;
 use App\Models\Worker;
@@ -27,6 +28,7 @@ class DispatchService
         private readonly WorkerEligibilityService $eligibility,
         private readonly StrategyFactory $strategies,
         private readonly NotificationDispatcher $notifications,
+        private readonly WorkerScoringService $scoring,
     ) {}
 
     /** Entry point: try to (re)assign a worker to a job that needs one. */
@@ -41,6 +43,14 @@ class DispatchService
         $strategy = $this->resolveStrategy($appointment);
         if ($strategy->key() === AssignmentStrategy::MANUAL) {
             return; // leave for a human
+        }
+
+        // Scheduled booking: defer dispatch to lead-time before the appointment,
+        // so the engine assigns against current load/location, not hours ahead.
+        if ($this->shouldDefer($appointment)) {
+            $this->scheduleDeferred($appointment);
+
+            return;
         }
 
         // Bound total dispatch runs; exhaustion parks the job for an operator.
@@ -62,9 +72,35 @@ class DispatchService
             return;
         }
 
+        ['score' => $score, 'factors' => $factors] = $this->scoring->evaluate($worker, $appointment);
+
         $this->settings->usesOffers()
-            ? $this->offer($appointment, $worker, 'auto')
-            : $this->assign($appointment, $worker, 'auto');
+            ? $this->offer($appointment, $worker, 'auto', $score, $factors)
+            : $this->assign($appointment, $worker, 'auto', $score, $factors);
+    }
+
+    private function shouldDefer(Appointment $appointment): bool
+    {
+        if ($appointment->scheduled_at === null) {
+            return false;
+        }
+        $minutesUntil = ($appointment->scheduled_at->getTimestamp() - now()->getTimestamp()) / 60;
+
+        return $minutesUntil > $this->settings->int('immediate_threshold_minutes');
+    }
+
+    private function scheduleDeferred(Appointment $appointment): void
+    {
+        if ($appointment->dispatch_state === DispatchState::SCHEDULED) {
+            return; // already queued for its lead time
+        }
+
+        $appointment->update(['dispatch_state' => DispatchState::SCHEDULED]);
+
+        $fireAt = $appointment->scheduled_at->copy()
+            ->subMinutes($this->settings->int('dispatch_lead_minutes'));
+
+        ScheduledDispatch::dispatch($appointment->id)->delay($fireAt)->afterCommit();
     }
 
     /**
@@ -89,7 +125,8 @@ class DispatchService
         $worker = $eligible->isNotEmpty() ? $strategy->pick($appointment, $eligible) : null;
 
         if ($worker !== null) {
-            $this->assign($appointment, $worker, 'admin_auto');
+            ['score' => $score, 'factors' => $factors] = $this->scoring->evaluate($worker, $appointment);
+            $this->assign($appointment, $worker, 'admin_auto', $score, $factors);
         } else {
             $this->queueWaiting($appointment);
         }
@@ -98,15 +135,19 @@ class DispatchService
     }
 
     /** Commit a worker to a job immediately (direct mode, admin force-assign). */
-    public function assign(Appointment $appointment, Worker $worker, string $reason = 'manual'): AssignmentOffer
-    {
-        return DB::transaction(function () use ($appointment, $worker, $reason) {
+    public function assign(
+        Appointment $appointment, Worker $worker, string $reason = 'manual',
+        ?float $score = null, ?array $factors = null
+    ): AssignmentOffer {
+        return DB::transaction(function () use ($appointment, $worker, $reason, $score, $factors) {
             $previous = $appointment->worker_id;
 
             $offer = $appointment->offers()->create([
                 'worker_id' => $worker->id,
                 'status' => AssignmentOffer::STATUS_ASSIGNED,
                 'reason' => $reason,
+                'score' => $score,
+                'factors' => $factors,
                 'attempt' => $appointment->dispatch_attempts,
                 'offered_at' => now(),
                 'responded_at' => now(),
@@ -129,15 +170,19 @@ class DispatchService
     }
 
     /** Open a consented offer with a countdown (offer mode). */
-    public function offer(Appointment $appointment, Worker $worker, string $reason = 'auto'): AssignmentOffer
-    {
+    public function offer(
+        Appointment $appointment, Worker $worker, string $reason = 'auto',
+        ?float $score = null, ?array $factors = null
+    ): AssignmentOffer {
         $timeout = $this->settings->int('acceptance_timeout_seconds');
 
-        return DB::transaction(function () use ($appointment, $worker, $reason, $timeout) {
+        return DB::transaction(function () use ($appointment, $worker, $reason, $timeout, $score, $factors) {
             $offer = $appointment->offers()->create([
                 'worker_id' => $worker->id,
                 'status' => AssignmentOffer::STATUS_OFFERED,
                 'reason' => $reason,
+                'score' => $score,
+                'factors' => $factors,
                 'attempt' => $appointment->dispatch_attempts,
                 'offered_at' => now(),
                 'expires_at' => now()->addSeconds($timeout),
