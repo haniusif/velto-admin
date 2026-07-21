@@ -16,6 +16,8 @@ class StrategyFactory
             AssignmentStrategy::MANUAL => ManualStrategy::class,
             AssignmentStrategy::ROUND_ROBIN => RoundRobinStrategy::class,
             AssignmentStrategy::CITY_BASED => CityBasedStrategy::class,
+            AssignmentStrategy::ZONE_BASED => ZoneBasedStrategy::class,
+            AssignmentStrategy::SKILL_BASED => SkillBasedStrategy::class,
             AssignmentStrategy::LEAST_LOADED => LeastLoadedStrategy::class,
             AssignmentStrategy::NEAREST => NearestStrategy::class,
             // auto + everything not yet implemented use weighted scoring

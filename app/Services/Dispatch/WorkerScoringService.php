@@ -95,6 +95,17 @@ class WorkerScoringService
 
     private function sameZoneFactor(Worker $worker, Appointment $appointment): float
     {
+        // Prefer real zone coverage; only fall back to the city proxy when the
+        // worker declares no zones (so zone data, once present, wins).
+        if ($appointment->zone_id !== null) {
+            $zoneIds = $worker->relationLoaded('zones')
+                ? $worker->zones->pluck('id')
+                : $worker->zones()->pluck('zones.id');
+            if ($zoneIds->isNotEmpty()) {
+                return $zoneIds->contains($appointment->zone_id) ? 1.0 : 0.0;
+            }
+        }
+
         $city = $appointment->area?->city?->name;
         if ($city === null || $worker->city === null) {
             return 0.0;

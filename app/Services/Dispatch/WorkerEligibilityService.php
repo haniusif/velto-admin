@@ -21,7 +21,9 @@ class WorkerEligibilityService
     {
         $declined = $appointment->declinedWorkerIds();
 
-        $query = Worker::query()->where('status', 'active');
+        $query = Worker::query()
+            ->with(['shifts', 'timeOff', 'skills', 'zones'])
+            ->where('status', 'active');
 
         if ($this->settings->bool('require_online')) {
             $query->where('is_online', true);
@@ -41,6 +43,16 @@ class WorkerEligibilityService
             return false;
         }
         if ($this->settings->bool('require_online') && ! $worker->is_online) {
+            return false;
+        }
+        // Availability: on shift and not on leave (both opt-in per worker — a
+        // worker with no shifts/time-off defined is always available).
+        $when = $appointment->scheduled_at ?? now();
+        if (! $worker->isOnShift($when) || $worker->isOnLeave($when)) {
+            return false;
+        }
+        // Skill: a package's required skill is mandatory (safety hard gate).
+        if (! $worker->hasSkill($appointment->washPackage?->required_skill_id)) {
             return false;
         }
         if (! $worker->isUnderConcurrentCap()) {

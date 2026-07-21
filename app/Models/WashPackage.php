@@ -15,6 +15,8 @@ class WashPackage extends Model
         'type',
         'price',
         'duration_minutes',
+        'required_skill_id',
+        'dispatch_strategy',
         'visits_count',
         'validity_days',
         'image_path',

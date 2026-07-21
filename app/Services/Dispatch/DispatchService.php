@@ -6,6 +6,7 @@ use App\Jobs\ExpireOffer;
 use App\Jobs\ScheduledDispatch;
 use App\Models\Appointment;
 use App\Models\AssignmentOffer;
+use App\Models\DispatchEvent;
 use App\Models\Worker;
 use App\Services\Dispatch\Strategies\AssignmentStrategy;
 use App\Services\Dispatch\Strategies\StrategyFactory;
@@ -101,6 +102,7 @@ class DispatchService
             ->subMinutes($this->settings->int('dispatch_lead_minutes'));
 
         ScheduledDispatch::dispatch($appointment->id)->delay($fireAt)->afterCommit();
+        DispatchEvent::record($appointment->id, DispatchEvent::TYPE_SCHEDULED, meta: ['fire_at' => $fireAt->toIso8601String()]);
     }
 
     /**
@@ -165,6 +167,10 @@ class DispatchService
                 $this->notifications->workerReassignedAway($previous, $appointment);
             }
 
+            DispatchEvent::record($appointment->id, DispatchEvent::TYPE_ASSIGNED, $worker->id,
+                actor: str_starts_with($reason, 'admin') ? 'admin' : 'engine',
+                reason: $reason, meta: $score !== null ? ['score' => $score] : []);
+
             return $offer;
         });
     }
@@ -195,6 +201,8 @@ class DispatchService
 
             ExpireOffer::dispatch($offer->id)->delay(now()->addSeconds($timeout))->afterCommit();
             $this->notifications->workerOffered($offer);
+            DispatchEvent::record($appointment->id, DispatchEvent::TYPE_OFFERED, $worker->id,
+                reason: $reason, meta: $score !== null ? ['score' => $score] : []);
 
             return $offer;
         });
@@ -232,6 +240,7 @@ class DispatchService
                 'accepted_at' => now(),
             ]);
             $this->notifications->customerWorkerAssigned($appointment->fresh(['worker']));
+            DispatchEvent::record($appointment->id, DispatchEvent::TYPE_ACCEPTED, $worker->id, actor: 'worker');
 
             return $appointment;
         });
@@ -242,6 +251,7 @@ class DispatchService
     {
         if ($offer->isPending()) {
             $offer->update(['status' => AssignmentOffer::STATUS_REJECTED, 'responded_at' => now(), 'reason' => $reason]);
+            DispatchEvent::record($offer->appointment_id, DispatchEvent::TYPE_REJECTED, $offer->worker_id, actor: 'worker', reason: $reason);
         }
         $this->redispatch($offer->appointment);
     }
@@ -253,6 +263,7 @@ class DispatchService
             return;
         }
         $offer->update(['status' => AssignmentOffer::STATUS_EXPIRED, 'responded_at' => now(), 'reason' => 'timeout']);
+        DispatchEvent::record($offer->appointment_id, DispatchEvent::TYPE_EXPIRED, $offer->worker_id, reason: 'timeout');
         $this->redispatch($offer->appointment);
     }
 
@@ -283,6 +294,8 @@ class DispatchService
         if ($previous !== null) {
             $this->notifications->workerReassignedAway($previous, $appointment);
         }
+        DispatchEvent::record($appointment->id, DispatchEvent::TYPE_REASSIGNED, $previous,
+            actor: str_starts_with($reason, 'admin') ? 'admin' : 'engine', reason: $reason);
 
         $this->dispatch($appointment->fresh());
     }
@@ -300,7 +313,10 @@ class DispatchService
 
     private function resolveStrategy(Appointment $appointment): AssignmentStrategy
     {
-        $key = $appointment->dispatch_strategy ?: $this->settings->string('default_strategy');
+        // Per-job override → per-service default → global default.
+        $key = $appointment->dispatch_strategy
+            ?: $appointment->washPackage?->dispatch_strategy
+            ?: $this->settings->string('default_strategy');
 
         return $this->strategies->make($key);
     }
@@ -308,6 +324,7 @@ class DispatchService
     private function queueWaiting(Appointment $appointment, bool $escalate = false): void
     {
         $appointment->update(['dispatch_state' => DispatchState::WAITING]);
+        DispatchEvent::record($appointment->id, DispatchEvent::TYPE_WAITING, reason: $escalate ? 'exhausted' : null);
 
         if ($escalate) {
             Log::warning('[dispatch] no worker after max retries — escalating', [
