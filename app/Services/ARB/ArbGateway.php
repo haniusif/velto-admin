@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Log;
  * Reference: ARB REST Integration Guide v1.31, "Bank Hosted Integration" and
  * "Merchant Hosted Transaction Flow (Inquiry, Void, Refund, Capture)".
  *
- * NOTE: the on-the-wire envelope shape (JSON array vs object; JSON body vs
- * form-encoded) and the sandbox endpoint URL must be confirmed against the
- * ARB sandbox once credentials are issued. Those choices are isolated here.
+ * The on-the-wire envelope (single-element JSON array, JSON body) and the
+ * URL-encoded-hex AES-256-CBC `trandata` are confirmed working against the
+ * Neoleap sandbox (token generated, encrypted response decrypted end-to-end).
  */
 class ArbGateway
 {
@@ -55,7 +55,8 @@ class ArbGateway
         ];
 
         if (! empty($opts['lang'])) {
-            $trandata['langid'] = $opts['lang'] === 'ar' ? 'AR' : 'en';
+            // Doc specifies 'AR' for Arabic; 'EN' for the English payment page.
+            $trandata['langid'] = $opts['lang'] === 'ar' ? 'AR' : 'EN';
         }
         foreach (['udf1', 'udf2', 'udf3', 'udf4', 'udf5'] as $udf) {
             if (! empty($opts[$udf])) {
