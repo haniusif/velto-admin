@@ -24,6 +24,9 @@ class WorkerNotification extends Model
     ];
 
     public const KIND_ASSIGNED = 'assigned';
+    public const KIND_OFFERED = 'offered';
+    public const KIND_OFFER_EXPIRED = 'offer_expired';
+    public const KIND_REASSIGNED_AWAY = 'reassigned_away';
     public const KIND_RESCHEDULED = 'rescheduled';
     public const KIND_CANCELLED = 'cancelled';
     public const KIND_REMINDER = 'reminder';

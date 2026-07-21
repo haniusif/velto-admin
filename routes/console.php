@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Release unpaid pending bookings so they never linger as "booked".
 // Grace window is configurable in admin settings (booking.pending_grace_minutes).
 Schedule::command('bookings:cancel-stale')->everyFiveMinutes();
+
+// Dispatch backstop: expire stale offers, retry the waiting-assignment queue.
+Schedule::command('dispatch:sweep')->everyMinute()->withoutOverlapping();

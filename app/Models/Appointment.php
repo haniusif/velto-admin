@@ -55,6 +55,12 @@ class Appointment extends Model
         'started_at',
         'arrived_at',
         'work_started_at',
+        'dispatch_state',
+        'dispatch_strategy',
+        'auto_dispatch',
+        'assignment_locked',
+        'dispatch_attempts',
+        'last_offer_id',
     ];
 
     protected $casts = [
@@ -71,28 +77,34 @@ class Appointment extends Model
         'base_price' => 'decimal:2',
         'addons_total' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'auto_dispatch' => 'boolean',
+        'assignment_locked' => 'boolean',
+        'dispatch_attempts' => 'integer',
     ];
 
     protected static function booted(): void
     {
-        // Notify a worker when they are assigned (or re-assigned) to a job.
         static::saved(function (Appointment $appointment): void {
-            if (! $appointment->wasChanged('worker_id') || $appointment->worker_id === null) {
-                return;
+            // (1) A worker was (re)assigned — fan out the "assigned" notification
+            // via the dispatch notification layer (was inline here previously).
+            if ($appointment->wasChanged('worker_id') && $appointment->worker_id !== null) {
+                event(new \App\Events\WorkerAssigned($appointment));
             }
 
-            $when = $appointment->scheduled_at?->format('Y-m-d H:i');
-            $serviceAr = $appointment->service_name_ar ?: $appointment->service_name;
+            // (2) A newly-confirmed, still-unassigned job enters the engine. This
+            // is the single auto-dispatch chokepoint — wallet create, card-payment
+            // settle, reschedule, and admin edits all pass through here. RunDispatch
+            // is idempotent, so a redundant fire is harmless.
+            $becameConfirmed = $appointment->wasRecentlyCreated
+                ? $appointment->status === self::STATUS_CONFIRMED
+                : $appointment->wasChanged('status') && $appointment->status === self::STATUS_CONFIRMED;
 
-            WorkerNotification::create([
-                'worker_id' => $appointment->worker_id,
-                'kind' => WorkerNotification::KIND_ASSIGNED,
-                'title' => 'New job assigned',
-                'title_ar' => 'تم إسناد مهمة جديدة',
-                'body' => trim("{$appointment->service_name} — {$when}"),
-                'body_ar' => trim("{$serviceAr} — {$when}"),
-                'data' => ['appointment_id' => $appointment->id],
-            ]);
+            if ($becameConfirmed
+                && $appointment->worker_id === null
+                && $appointment->auto_dispatch
+                && ! $appointment->assignment_locked) {
+                \App\Jobs\RunDispatch::dispatch($appointment->id)->afterCommit();
+            }
         });
     }
 
@@ -134,6 +146,40 @@ class Appointment extends Model
     public function walletTransaction(): BelongsTo
     {
         return $this->belongsTo(WalletTransaction::class);
+    }
+
+    public function offers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AssignmentOffer::class);
+    }
+
+    // --- dispatch helpers ------------------------------------------------
+
+    /** Whether the engine may (re)dispatch this job right now. */
+    public function needsDispatch(): bool
+    {
+        return $this->worker_id === null
+            && $this->auto_dispatch
+            && ! $this->assignment_locked
+            && in_array($this->status, self::ACTIVE_STATUSES, true)
+            && ! $this->hasPendingOffer();
+    }
+
+    public function hasPendingOffer(): bool
+    {
+        return $this->offers()
+            ->where('status', AssignmentOffer::STATUS_OFFERED)
+            ->exists();
+    }
+
+    /** Workers who already rejected/expired an offer for this job — excluded from re-dispatch. */
+    public function declinedWorkerIds(): array
+    {
+        return $this->offers()
+            ->whereIn('status', [AssignmentOffer::STATUS_REJECTED, AssignmentOffer::STATUS_EXPIRED])
+            ->pluck('worker_id')
+            ->unique()
+            ->all();
     }
 
     protected function isUpcoming(): Attribute

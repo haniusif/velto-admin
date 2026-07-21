@@ -10,8 +10,10 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Api\V1\WorkerAuthController;
+use App\Http\Controllers\Api\V1\WorkerDutyController;
 use App\Http\Controllers\Api\V1\WorkerJobController;
 use App\Http\Controllers\Api\V1\WorkerNotificationController;
+use App\Http\Controllers\Api\V1\WorkerOfferController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -97,6 +99,13 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::middleware('auth:worker')->group(function () {
+            // Duty & dispatch offers
+            Route::post('/duty', [WorkerDutyController::class, 'setDuty']);
+            Route::post('/heartbeat', [WorkerDutyController::class, 'heartbeat']);
+            Route::get('/offers', [WorkerOfferController::class, 'index']);
+            Route::post('/offers/{offer}/accept', [WorkerOfferController::class, 'accept']);
+            Route::post('/offers/{offer}/reject', [WorkerOfferController::class, 'reject']);
+
             Route::get('/jobs', [WorkerJobController::class, 'index']);
             Route::get('/jobs/{appointment}', [WorkerJobController::class, 'show']);
             Route::post('/jobs/{appointment}/accept', [WorkerJobController::class, 'accept']);

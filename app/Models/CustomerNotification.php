@@ -25,6 +25,8 @@ class CustomerNotification extends Model
 
     public const KIND_WELCOME = 'welcome';
     public const KIND_BOOKING = 'booking';
+    public const KIND_WORKER_ASSIGNED = 'worker_assigned';
+    public const KIND_WORKER_CHANGED = 'worker_changed';
     public const KIND_ON_THE_WAY = 'on_the_way';
     public const KIND_ARRIVED = 'arrived';
     public const KIND_COMPLETED = 'completed';

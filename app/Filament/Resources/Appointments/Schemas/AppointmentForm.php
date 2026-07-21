@@ -6,6 +6,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class AppointmentForm
@@ -25,7 +26,20 @@ class AppointmentForm
                     ->label(__('Assigned worker'))
                     ->relationship('worker', 'name')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->helperText(__('Leave empty to let the dispatch engine auto-assign.')),
+
+                Toggle::make('auto_dispatch')
+                    ->label(__('Auto-dispatch'))
+                    ->helperText(__('Let the engine assign a worker automatically.'))
+                    ->default(true)
+                    ->inline(false),
+
+                Toggle::make('assignment_locked')
+                    ->label(__('Lock assignment'))
+                    ->helperText(__('Pin this worker — the engine will never reassign.'))
+                    ->default(false)
+                    ->inline(false),
 
                 Select::make('status')
                     ->label(__('Status'))

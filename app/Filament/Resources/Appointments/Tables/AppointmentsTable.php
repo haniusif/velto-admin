@@ -5,15 +5,20 @@ namespace App\Filament\Resources\Appointments\Tables;
 use App\Models\Appointment;
 use App\Models\TimeSlot;
 use App\Models\WalletTransaction;
+use App\Models\Worker;
+use App\Services\Dispatch\DispatchService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AppointmentsTable
@@ -112,16 +117,107 @@ class AppointmentsTable
                     ]),
             ])
             ->recordActions([
+                self::autoAssignAction(),
                 ViewAction::make(),
                 EditAction::make(),
                 self::cancelAction(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    self::autoAssignBulkAction(),
+                    self::assignToWorkerBulkAction(),
                     DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('scheduled_at', 'desc');
+    }
+
+    /** Only unassigned, still-active jobs can be auto-assigned. */
+    private static function isAssignable(Appointment $record): bool
+    {
+        return $record->worker_id === null
+            && in_array($record->status, Appointment::ACTIVE_STATUSES, true);
+    }
+
+    /** Row action: pick the best eligible worker for this one job. */
+    private static function autoAssignAction(): Action
+    {
+        return Action::make('autoAssign')
+            ->label(__('Auto-assign'))
+            ->icon('heroicon-o-bolt')
+            ->color('primary')
+            ->visible(fn (Appointment $record): bool => self::isAssignable($record))
+            ->action(function (Appointment $record): void {
+                $worker = app(DispatchService::class)->autoAssign($record);
+
+                $worker
+                    ? Notification::make()->success()
+                        ->title(__('Assigned to :name', ['name' => $worker->name]))->send()
+                    : Notification::make()->warning()
+                        ->title(__('No eligible worker'))
+                        ->body(__('The job was placed in the waiting queue.'))->send();
+            });
+    }
+
+    /** Bulk: auto-assign each selected unassigned job. */
+    private static function autoAssignBulkAction(): BulkAction
+    {
+        return BulkAction::make('autoAssignBulk')
+            ->label(__('Auto-assign'))
+            ->icon('heroicon-o-bolt')
+            ->color('primary')
+            ->action(function (Collection $records): void {
+                $dispatch = app(DispatchService::class);
+                $assigned = 0;
+                $queued = 0;
+
+                foreach ($records as $record) {
+                    if (! self::isAssignable($record)) {
+                        continue;
+                    }
+                    $dispatch->autoAssign($record) ? $assigned++ : $queued++;
+                }
+
+                Notification::make()->success()
+                    ->title(__(':assigned assigned, :queued queued', ['assigned' => $assigned, 'queued' => $queued]))
+                    ->send();
+            })
+            ->deselectRecordsAfterCompletion();
+    }
+
+    /** Bulk: assign every selected job to one chosen worker. */
+    private static function assignToWorkerBulkAction(): BulkAction
+    {
+        return BulkAction::make('assignToWorker')
+            ->label(__('Assign to worker'))
+            ->icon('heroicon-o-user-plus')
+            ->schema([
+                Select::make('worker_id')
+                    ->label(__('Worker'))
+                    ->options(fn () => Worker::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
+                    ->searchable()
+                    ->required(),
+            ])
+            ->action(function (Collection $records, array $data): void {
+                $worker = Worker::find($data['worker_id']);
+                if ($worker === null) {
+                    return;
+                }
+                $dispatch = app(DispatchService::class);
+                $count = 0;
+
+                foreach ($records as $record) {
+                    if (self::isAssignable($record)) {
+                        $dispatch->assign($record, $worker, 'admin_bulk');
+                        $count++;
+                    }
+                }
+
+                Notification::make()->success()
+                    ->title(__(':count order(s) assigned to :name', ['count' => $count, 'name' => $worker->name]))
+                    ->send();
+            })
+            ->deselectRecordsAfterCompletion();
     }
 
     /** Cancel an order: free its time slot and refund a wallet-paid booking. */

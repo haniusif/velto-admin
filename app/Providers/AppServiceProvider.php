@@ -28,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // WorkerAssigned → SendWorkerAssignedNotification is auto-discovered by
+        // Laravel's listener discovery (app/Listeners); no manual binding needed.
+
         LanguageSwitch::configureUsing(function (LanguageSwitch $switch): void {
             $switch
                 ->locales(['en', 'ar'])
