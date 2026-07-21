@@ -19,6 +19,11 @@ class AppScenarios extends Page
         return __('App scenarios');
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('Settings');
+    }
+
     public function getTitle(): string
     {
         return __('App scenarios');

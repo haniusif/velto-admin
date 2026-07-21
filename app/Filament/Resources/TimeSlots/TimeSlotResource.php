@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TimeSlots;
 
+use App\Filament\Resources\TimeSlots\Pages\CalendarTimeSlots;
 use App\Filament\Resources\TimeSlots\Pages\CreateTimeSlot;
 use App\Filament\Resources\TimeSlots\Pages\EditTimeSlot;
 use App\Filament\Resources\TimeSlots\Pages\ListTimeSlots;
@@ -64,7 +65,8 @@ class TimeSlotResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListTimeSlots::route('/'),
+            'index' => CalendarTimeSlots::route('/'),
+            'list' => ListTimeSlots::route('/list'),
             'create' => CreateTimeSlot::route('/create'),
             'view' => ViewTimeSlot::route('/{record}'),
             'edit' => EditTimeSlot::route('/{record}/edit'),
