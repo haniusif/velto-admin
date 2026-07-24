@@ -48,6 +48,22 @@ class Worker extends Authenticatable
         'last_lng' => 'float',
     ];
 
+    /** Registered push devices (FCM tokens) for this worker. */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(WorkerDevice::class);
+    }
+
+    /** @return array<int,string> Non-empty FCM tokens across this worker's devices. */
+    public function deviceTokens(): array
+    {
+        return $this->devices()
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     /** Jobs (appointments) assigned to this worker. */
     public function appointments(): HasMany
     {

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Api\V1\WorkerAuthController;
+use App\Http\Controllers\Api\V1\WorkerDeviceController;
 use App\Http\Controllers\Api\V1\WorkerDutyController;
 use App\Http\Controllers\Api\V1\WorkerJobController;
 use App\Http\Controllers\Api\V1\WorkerNotificationController;
@@ -99,6 +100,10 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::middleware('auth:worker')->group(function () {
+            // Push device registration (FCM tokens)
+            Route::post('/devices', [WorkerDeviceController::class, 'store']);
+            Route::delete('/devices', [WorkerDeviceController::class, 'destroy']);
+
             // Duty & dispatch offers
             Route::post('/duty', [WorkerDutyController::class, 'setDuty']);
             Route::post('/heartbeat', [WorkerDutyController::class, 'heartbeat']);

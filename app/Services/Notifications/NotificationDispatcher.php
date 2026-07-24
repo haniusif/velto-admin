@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\Appointment;
 use App\Models\AssignmentOffer;
 use App\Models\CustomerNotification;
+use App\Models\Worker;
 use App\Models\WorkerNotification;
 
 /**
@@ -94,8 +95,18 @@ class NotificationDispatcher
             'data' => $data,
         ]);
 
-        // Push is dormant until a device-token store + FCM key exist (Phase 1
-        // ships DB-only). The seam is here so it lights up without touching callers.
-        $this->push->send([], $title, $body, $data);
+        // Fan the same notification out as an FCM push to the worker's devices.
+        // Send the worker's preferred-language title/body so the banner is
+        // localized; PushSender no-ops when FCM isn't configured.
+        $worker = Worker::find($workerId);
+        if ($worker !== null) {
+            $useAr = ($worker->preferred_language ?? 'ar') === 'ar';
+            $this->push->send(
+                $worker->deviceTokens(),
+                $useAr ? $titleAr : $title,
+                $useAr ? $bodyAr : $body,
+                array_map('strval', array_merge($data, ['kind' => $kind])),
+            );
+        }
     }
 }
