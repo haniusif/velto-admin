@@ -51,8 +51,7 @@ class CoverageMap extends Page
 
     public function googleMapsKey(): string
     {
-        return (string) (config('services.google_maps.key')
-            ?: 'AIzaSyCMyabfcrVJcrhMaWi92zJf5hQwfyeYqdk');
+        return (string) config('services.google_maps.key');
     }
 
     /** Livewire action fired from the map/list: flip a district's coverage. */
