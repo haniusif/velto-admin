@@ -33,15 +33,28 @@ return [
         'key' => env('GOOGLE_MAPS_KEY'),
     ],
 
-    // Firebase Cloud Messaging (worker push). Uses the FCM HTTP v1 API, which
-    // authenticates with a Google service-account JSON (not a legacy server key).
-    // Drop the service-account file on the server and point FCM_CREDENTIALS at it.
+    // Firebase Cloud Messaging. Uses the FCM HTTP v1 API, which authenticates
+    // with a Google service-account JSON (not a legacy server key). Drop the
+    // service-account file on the server and point the credentials env at it.
+    //
+    // The two apps live in SEPARATE Firebase projects (customer: velto-4d22e,
+    // worker: velto-worker), so each audience needs its own project id and
+    // service account — a token minted by one project is rejected by the other.
+    // Top level is the customer app; `worker` overrides it for the worker app.
     'fcm' => [
         'project' => env('FCM_PROJECT_ID'),
         'credentials' => env('FCM_CREDENTIALS', storage_path('app/firebase/service-account.json')),
-        // Android notification channel + sound the worker app defines for offers.
-        'android_channel' => env('FCM_ANDROID_CHANNEL', 'offers'),
+        // Android notification channel + sound the customer app defines.
+        'android_channel' => env('FCM_ANDROID_CHANNEL', 'booking'),
         'sound' => env('FCM_SOUND', 'bell'),
+
+        'worker' => [
+            'project' => env('FCM_WORKER_PROJECT_ID'),
+            'credentials' => env('FCM_WORKER_CREDENTIALS', storage_path('app/firebase/worker-service-account.json')),
+            // Android notification channel + sound the worker app defines for offers.
+            'android_channel' => env('FCM_WORKER_ANDROID_CHANNEL', 'offers'),
+            'sound' => env('FCM_WORKER_SOUND', 'bell'),
+        ],
     ],
 /*
     |--------------------------------------------------------------------------

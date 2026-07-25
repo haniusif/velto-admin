@@ -11,68 +11,75 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * FCM push transport (HTTP v1 API). Config-gated: when no service-account /
- * project is configured it no-ops with a debug log, so the dispatch flow works
- * without Firebase. Once services.fcm.project + credentials exist it sends a
- * message per device token and prunes tokens FCM reports as unregistered.
+ * project is configured for an audience it no-ops with a debug log, so the
+ * dispatch flow works without Firebase.
+ *
+ * The customer and worker apps live in separate Firebase projects, so every
+ * send is scoped to an audience — that picks the project, the service account,
+ * the Android channel, and which device table to prune. Sending a token through
+ * the wrong project fails and would prune a perfectly valid token, so the
+ * audience must always match where the token came from.
  */
 class PushSender
 {
+    public const AUDIENCE_CUSTOMER = 'customer';
+    public const AUDIENCE_WORKER = 'worker';
+
     private const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 
-    public function configured(): bool
+    public function configured(string $audience = self::AUDIENCE_CUSTOMER): bool
     {
-        $creds = config('services.fcm.credentials');
+        $config = $this->config($audience);
 
-        return filled(config('services.fcm.project'))
-            && is_string($creds) && is_file($creds);
+        return filled($config['project'])
+            && is_string($config['credentials']) && is_file($config['credentials']);
     }
 
     /**
-     * @param  array<int,string>  $tokens  device tokens
+     * @param  array<int,string>  $tokens  device tokens, all belonging to $audience
      * @param  array<string,mixed>  $data
-     * @param  string|null  $channel  Android channel id; defaults to the worker
-     *                                'offers' channel. Each app declares its own,
-     *                                so the customer app passes 'booking'.
      */
     public function send(
         array $tokens, string $title, string $body,
-        array $data = [], ?string $channel = null,
+        array $data = [], string $audience = self::AUDIENCE_CUSTOMER,
     ): void {
         $tokens = array_values(array_filter($tokens));
         if (empty($tokens)) {
             return;
         }
 
-        if (! $this->configured()) {
-            Log::debug('[push] skipped (FCM not configured)', ['title' => $title, 'count' => count($tokens)]);
+        if (! $this->configured($audience)) {
+            Log::debug('[push] skipped (FCM not configured)', [
+                'audience' => $audience, 'title' => $title, 'count' => count($tokens),
+            ]);
 
             return;
         }
+
+        $config = $this->config($audience);
 
         try {
-            $accessToken = $this->accessToken();
+            $accessToken = $this->accessToken($audience, $config['credentials']);
         } catch (\Throwable $e) {
-            Log::warning('[push] auth failed', ['error' => $e->getMessage()]);
+            Log::warning('[push] auth failed', ['audience' => $audience, 'error' => $e->getMessage()]);
 
             return;
         }
 
-        $project = config('services.fcm.project');
-        $url = "https://fcm.googleapis.com/v1/projects/{$project}/messages:send";
-        $channel ??= config('services.fcm.android_channel', 'offers');
-        $sound = config('services.fcm.sound', 'bell');
+        $url = "https://fcm.googleapis.com/v1/projects/{$config['project']}/messages:send";
 
         foreach ($tokens as $token) {
-            $this->sendOne($url, $accessToken, $token, $title, $body, $data, $channel, $sound);
+            $this->sendOne($url, $accessToken, $token, $title, $body, $data, $config, $audience);
         }
     }
 
     /**
      * @param  array<string,mixed>  $data
+     * @param  array<string,mixed>  $config
      */
     private function sendOne(
         string $url, string $accessToken, string $token,
-        string $title, string $body, array $data, string $channel, string $sound,
+        string $title, string $body, array $data, array $config, string $audience,
     ): void {
         try {
             $response = Http::withToken($accessToken)
@@ -85,13 +92,13 @@ class PushSender
                         'android' => [
                             'priority' => 'high',
                             'notification' => [
-                                'channel_id' => $channel,
-                                'sound' => $sound,
+                                'channel_id' => $config['channel'],
+                                'sound' => $config['sound'],
                             ],
                         ],
                         'apns' => [
                             'payload' => [
-                                'aps' => ['sound' => $sound.'.caf'],
+                                'aps' => ['sound' => $config['sound'].'.caf'],
                             ],
                         ],
                     ],
@@ -100,24 +107,59 @@ class PushSender
             if ($response->failed()) {
                 $status = $response->json('error.status');
                 // A token that's no longer valid — drop it so we stop trying.
-                // A token identifies one install, so it lives in at most one of
-                // these tables; clearing both is a no-op for the other.
                 if (in_array($status, ['NOT_FOUND', 'UNREGISTERED', 'INVALID_ARGUMENT'], true)) {
-                    WorkerDevice::where('fcm_token', $token)->delete();
-                    CustomerDevice::where('fcm_token', $token)->delete();
+                    $this->pruneToken($audience, $token);
                 }
-                Log::warning('[push] send failed', ['status' => $status, 'body' => $response->json()]);
+                Log::warning('[push] send failed', [
+                    'audience' => $audience, 'status' => $status, 'body' => $response->json(),
+                ]);
             }
         } catch (\Throwable $e) {
-            Log::warning('[push] send error', ['error' => $e->getMessage()]);
+            Log::warning('[push] send error', ['audience' => $audience, 'error' => $e->getMessage()]);
         }
     }
 
-    /** OAuth2 access token for the FCM scope, cached until shortly before expiry. */
-    private function accessToken(): string
+    /** Drop a dead token from the table it belongs to (never the other audience's). */
+    private function pruneToken(string $audience, string $token): void
     {
-        return Cache::remember('fcm.access_token', now()->addMinutes(50), function () {
-            $creds = new ServiceAccountCredentials(self::SCOPE, config('services.fcm.credentials'));
+        $model = $audience === self::AUDIENCE_WORKER ? WorkerDevice::class : CustomerDevice::class;
+        $model::where('fcm_token', $token)->delete();
+    }
+
+    /**
+     * Project / service account / channel / sound for an audience. Top-level
+     * config is the customer app; the worker app overrides it wholesale.
+     *
+     * @return array<string,mixed>
+     */
+    private function config(string $audience): array
+    {
+        $fcm = config('services.fcm', []);
+
+        if ($audience === self::AUDIENCE_WORKER) {
+            $worker = $fcm['worker'] ?? [];
+
+            return [
+                'project' => $worker['project'] ?? null,
+                'credentials' => $worker['credentials'] ?? null,
+                'channel' => $worker['android_channel'] ?? 'offers',
+                'sound' => $worker['sound'] ?? 'bell',
+            ];
+        }
+
+        return [
+            'project' => $fcm['project'] ?? null,
+            'credentials' => $fcm['credentials'] ?? null,
+            'channel' => $fcm['android_channel'] ?? 'booking',
+            'sound' => $fcm['sound'] ?? 'bell',
+        ];
+    }
+
+    /** OAuth2 access token for the FCM scope, cached per audience until shortly before expiry. */
+    private function accessToken(string $audience, string $credentials): string
+    {
+        return Cache::remember("fcm.access_token.{$audience}", now()->addMinutes(50), function () use ($credentials) {
+            $creds = new ServiceAccountCredentials(self::SCOPE, $credentials);
             $token = $creds->fetchAuthToken();
 
             return $token['access_token'];

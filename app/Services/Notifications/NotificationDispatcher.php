@@ -94,7 +94,8 @@ class NotificationDispatcher
 
     /**
      * Durable inbox row + a push to the customer's devices, in their language.
-     * Mirrors toWorker(); the customer app declares the 'booking' channel.
+     * Mirrors toWorker(); the audience selects the Firebase project, service
+     * account, and Android channel ('booking' for the customer app).
      */
     private function toCustomer(
         ?int $customerId, string $kind, string $title, string $titleAr,
@@ -122,7 +123,7 @@ class NotificationDispatcher
                 $useAr ? $titleAr : $title,
                 $useAr ? $bodyAr : $body,
                 array_map('strval', array_merge($data, ['kind' => $kind])),
-                'booking',
+                PushSender::AUDIENCE_CUSTOMER,
             );
         }
     }
@@ -156,6 +157,7 @@ class NotificationDispatcher
                 $useAr ? $titleAr : $title,
                 $useAr ? $bodyAr : $body,
                 array_map('strval', array_merge($data, ['kind' => $kind])),
+                PushSender::AUDIENCE_WORKER,
             );
         }
     }
