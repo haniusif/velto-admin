@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Models\Appointment;
 use App\Models\AssignmentOffer;
+use App\Models\Customer;
 use App\Models\CustomerNotification;
 use App\Models\Worker;
 use App\Models\WorkerNotification;
@@ -59,23 +60,72 @@ class NotificationDispatcher
     /** Customer's specialist is confirmed (or changed). */
     public function customerWorkerAssigned(Appointment $a, bool $changed = false): void
     {
-        if ($a->customer_id === null) {
-            return;
-        }
         $name = $a->worker?->name ?? '';
 
-        CustomerNotification::create([
-            'customer_id' => $a->customer_id,
-            'kind' => $changed ? CustomerNotification::KIND_WORKER_CHANGED : CustomerNotification::KIND_WORKER_ASSIGNED,
-            'title' => $changed ? 'Your specialist changed' : 'Your specialist is confirmed',
-            'title_ar' => $changed ? 'تم تغيير الأخصائي' : 'تم تأكيد الأخصائي',
-            'body' => trim($name),
-            'body_ar' => trim($name),
-            'data' => ['appointment_id' => $a->id, 'worker_id' => $a->worker_id],
-        ]);
+        $this->toCustomer($a->customer_id,
+            $changed ? CustomerNotification::KIND_WORKER_CHANGED : CustomerNotification::KIND_WORKER_ASSIGNED,
+            $changed ? 'Your specialist changed' : 'Your specialist is confirmed',
+            $changed ? 'تم تغيير الأخصائي' : 'تم تأكيد الأخصائي',
+            trim($name), trim($name),
+            ['appointment_id' => $a->id, 'worker_id' => $a->worker_id]);
+    }
+
+    /** Booking confirmed — after checkout or a successful payment capture. */
+    public function customerBooked(Appointment $a): void
+    {
+        $when = $a->scheduled_at?->format('Y-m-d H:i');
+
+        $this->toCustomer($a->customer_id, CustomerNotification::KIND_BOOKING,
+            'Booking confirmed', 'تم تأكيد الحجز',
+            "{$a->service_name} on {$when}", "{$a->service_name} بتاريخ {$when}",
+            ['appointment_id' => $a->id]);
+    }
+
+    /** Job status moved on — on the way / arrived / completed. */
+    public function customerJobStatus(
+        Appointment $a, string $kind,
+        string $title, string $titleAr, string $body, string $bodyAr,
+    ): void {
+        $this->toCustomer($a->customer_id, $kind, $title, $titleAr, $body, $bodyAr,
+            ['appointment_id' => $a->id]);
     }
 
     // --- internals -------------------------------------------------------
+
+    /**
+     * Durable inbox row + a push to the customer's devices, in their language.
+     * Mirrors toWorker(); the customer app declares the 'booking' channel.
+     */
+    private function toCustomer(
+        ?int $customerId, string $kind, string $title, string $titleAr,
+        string $body, string $bodyAr, array $data
+    ): void {
+        if ($customerId === null) {
+            return;
+        }
+
+        CustomerNotification::create([
+            'customer_id' => $customerId,
+            'kind' => $kind,
+            'title' => $title,
+            'title_ar' => $titleAr,
+            'body' => $body,
+            'body_ar' => $bodyAr,
+            'data' => $data,
+        ]);
+
+        $customer = Customer::find($customerId);
+        if ($customer !== null) {
+            $useAr = ($customer->preferred_language ?? 'ar') === 'ar';
+            $this->push->send(
+                $customer->deviceTokens(),
+                $useAr ? $titleAr : $title,
+                $useAr ? $bodyAr : $body,
+                array_map('strval', array_merge($data, ['kind' => $kind])),
+                'booking',
+            );
+        }
+    }
 
     private function toWorker(
         ?int $workerId, string $kind, string $title, string $titleAr,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\WorkerJobResource;
 use App\Models\Appointment;
 use App\Models\CustomerNotification;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 class WorkerJobController extends Controller
 {
     private const WITH = ['washPackage', 'vehicle', 'timeSlot', 'area', 'zone', 'customer'];
+
+    public function __construct(private readonly NotificationDispatcher $notifications) {}
 
     /** GET /api/v1/worker/jobs?filter=today|upcoming|active|completed|all */
     public function index(Request $request): JsonResponse
@@ -172,6 +175,7 @@ class WorkerJobController extends Controller
         return response()->json(['data' => new WorkerJobResource($appointment)]);
     }
 
+    /** Inbox row + push, via the dispatcher so both channels stay in step. */
     private function notifyCustomer(
         Appointment $appointment,
         string $kind,
@@ -180,14 +184,9 @@ class WorkerJobController extends Controller
         string $body,
         string $bodyAr,
     ): void {
-        $appointment->customer?->customerNotifications()->create([
-            'kind' => $kind,
-            'title' => $title,
-            'title_ar' => $titleAr,
-            'body' => $body,
-            'body_ar' => $bodyAr,
-            'data' => ['appointment_id' => $appointment->id],
-        ]);
+        $this->notifications->customerJobStatus(
+            $appointment, $kind, $title, $titleAr, $body, $bodyAr,
+        );
     }
 
     private function authorizeAssigned(Request $request, Appointment $appointment): void

@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
-use App\Models\CustomerNotification;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
 use App\Models\WalletTransaction;
 use App\Services\ARB\ArbGateway;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +22,10 @@ use Illuminate\Support\Facades\Log;
  */
 class PaymentController extends Controller
 {
-    public function __construct(private readonly ArbGateway $arb)
-    {
+    public function __construct(
+        private readonly ArbGateway $arb,
+        private readonly NotificationDispatcher $notifications,
+    ) {
     }
 
     /** responseURL — final redirect for a completed (success/declined) transaction. */
@@ -217,18 +219,10 @@ class PaymentController extends Controller
         ]);
     }
 
+    /** Inbox row + push, via the dispatcher so both channels stay in step. */
     private function notifyBooked(Appointment $appointment): void
     {
-        $when = $appointment->scheduled_at?->format('Y-m-d H:i');
-
-        $appointment->customer?->customerNotifications()->create([
-            'kind' => CustomerNotification::KIND_BOOKING,
-            'title' => 'Booking confirmed',
-            'title_ar' => 'تم تأكيد الحجز',
-            'body' => "{$appointment->service_name} on {$when}",
-            'body_ar' => "{$appointment->service_name} بتاريخ {$when}",
-            'data' => ['appointment_id' => $appointment->id],
-        ]);
+        $this->notifications->customerBooked($appointment);
     }
 
     private function doneRedirect(string $status): Response

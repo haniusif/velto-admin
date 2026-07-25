@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\CustomerDeviceController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -60,6 +61,10 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:customer')->prefix('me')->group(function () {
+        // Push device registration (FCM tokens)
+        Route::post('/devices', [CustomerDeviceController::class, 'store']);
+        Route::delete('/devices', [CustomerDeviceController::class, 'destroy']);
+
         // Vehicles
         Route::get('/vehicles', [VehicleController::class, 'index']);
         Route::post('/vehicles/photo', [VehicleController::class, 'photo']);

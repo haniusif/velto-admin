@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
-use App\Models\CustomerNotification;
 use App\Models\PackageAddOn;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
 use App\Models\WalletTransaction;
 use App\Models\WashPackage;
 use App\Services\ARB\ArbGateway;
+use App\Services\Notifications\NotificationDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,8 +24,10 @@ class AppointmentController extends Controller
 {
     private const WITH = ['washPackage', 'vehicle', 'timeSlot', 'area', 'zone'];
 
-    public function __construct(private readonly ArbGateway $arb)
-    {
+    public function __construct(
+        private readonly ArbGateway $arb,
+        private readonly NotificationDispatcher $notifications,
+    ) {
     }
 
     /** GET /api/v1/me/appointments?filter=upcoming|past|all */
@@ -328,10 +330,13 @@ class AppointmentController extends Controller
             $appointment->update(['wallet_transaction_id' => $tx->id]);
 
             $slot->increment('booked_count');
-            $this->notifyBooked($customer, $appointment);
 
             return $appointment;
         });
+
+        // Outside the transaction: notifying now sends an FCM request per device,
+        // and network I/O has no business holding the slot lock open.
+        $this->notifyBooked($appointment);
 
         $appointment->load(self::WITH);
 
@@ -550,7 +555,7 @@ class AppointmentController extends Controller
 
         $settled = $appointment->fresh();
         if ($settled?->status === Appointment::STATUS_CONFIRMED) {
-            $this->notifyBooked($settled->customer, $settled);
+            $this->notifyBooked($settled);
         }
     }
 
@@ -658,18 +663,10 @@ class AppointmentController extends Controller
         return "{$base}/api/v1/payments/arb/{$type}";
     }
 
-    private function notifyBooked($customer, Appointment $appointment): void
+    /** Inbox row + push, via the dispatcher so both channels stay in step. */
+    private function notifyBooked(Appointment $appointment): void
     {
-        $when = $appointment->scheduled_at?->format('Y-m-d H:i');
-
-        $customer->customerNotifications()->create([
-            'kind' => CustomerNotification::KIND_BOOKING,
-            'title' => 'Booking confirmed',
-            'title_ar' => 'تم تأكيد الحجز',
-            'body' => "{$appointment->service_name} on {$when}",
-            'body_ar' => "{$appointment->service_name} بتاريخ {$when}",
-            'data' => ['appointment_id' => $appointment->id],
-        ]);
+        $this->notifications->customerBooked($appointment);
     }
 
     private function authorizeOwn(Request $request, Appointment $appointment): void

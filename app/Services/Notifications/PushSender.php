@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifications;
 
+use App\Models\CustomerDevice;
 use App\Models\WorkerDevice;
 use Google\Auth\Credentials\ServiceAccountCredentials;
 use Illuminate\Support\Facades\Cache;
@@ -29,9 +30,14 @@ class PushSender
     /**
      * @param  array<int,string>  $tokens  device tokens
      * @param  array<string,mixed>  $data
+     * @param  string|null  $channel  Android channel id; defaults to the worker
+     *                                'offers' channel. Each app declares its own,
+     *                                so the customer app passes 'booking'.
      */
-    public function send(array $tokens, string $title, string $body, array $data = []): void
-    {
+    public function send(
+        array $tokens, string $title, string $body,
+        array $data = [], ?string $channel = null,
+    ): void {
         $tokens = array_values(array_filter($tokens));
         if (empty($tokens)) {
             return;
@@ -53,7 +59,7 @@ class PushSender
 
         $project = config('services.fcm.project');
         $url = "https://fcm.googleapis.com/v1/projects/{$project}/messages:send";
-        $channel = config('services.fcm.android_channel', 'offers');
+        $channel ??= config('services.fcm.android_channel', 'offers');
         $sound = config('services.fcm.sound', 'bell');
 
         foreach ($tokens as $token) {
@@ -94,8 +100,11 @@ class PushSender
             if ($response->failed()) {
                 $status = $response->json('error.status');
                 // A token that's no longer valid — drop it so we stop trying.
+                // A token identifies one install, so it lives in at most one of
+                // these tables; clearing both is a no-op for the other.
                 if (in_array($status, ['NOT_FOUND', 'UNREGISTERED', 'INVALID_ARGUMENT'], true)) {
                     WorkerDevice::where('fcm_token', $token)->delete();
+                    CustomerDevice::where('fcm_token', $token)->delete();
                 }
                 Log::warning('[push] send failed', ['status' => $status, 'body' => $response->json()]);
             }

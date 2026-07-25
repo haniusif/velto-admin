@@ -56,4 +56,19 @@ class Customer extends Authenticatable
     {
         return $this->hasMany(Appointment::class);
     }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(CustomerDevice::class);
+    }
+
+    /** @return array<int,string> Non-empty FCM tokens across this customer's devices. */
+    public function deviceTokens(): array
+    {
+        return $this->devices()
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+    }
 }
