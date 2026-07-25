@@ -106,8 +106,7 @@ class PushSender
 
             if ($response->failed()) {
                 $status = $response->json('error.status');
-                // A token that's no longer valid — drop it so we stop trying.
-                if (in_array($status, ['NOT_FOUND', 'UNREGISTERED', 'INVALID_ARGUMENT'], true)) {
+                if ($this->isDeadToken($status, (string) $response->json('error.message'))) {
                     $this->pruneToken($audience, $token);
                 }
                 Log::warning('[push] send failed', [
@@ -117,6 +116,26 @@ class PushSender
         } catch (\Throwable $e) {
             Log::warning('[push] send error', ['audience' => $audience, 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Is this failure the token's fault, rather than ours?
+     *
+     * UNREGISTERED / NOT_FOUND always mean the token is dead. INVALID_ARGUMENT
+     * does NOT: FCM also returns it for a malformed payload (a bad channel id,
+     * an oversized data map), and that failure repeats for every device. Pruning
+     * on it blindly would wipe the entire fleet's tokens on one bad deploy, so
+     * we only treat it as fatal when FCM says the registration token is the
+     * problem — the exact wording it returns for a bad token.
+     */
+    private function isDeadToken(?string $status, string $message): bool
+    {
+        if (in_array($status, ['NOT_FOUND', 'UNREGISTERED'], true)) {
+            return true;
+        }
+
+        return $status === 'INVALID_ARGUMENT'
+            && str_contains(strtolower($message), 'registration token');
     }
 
     /** Drop a dead token from the table it belongs to (never the other audience's). */
