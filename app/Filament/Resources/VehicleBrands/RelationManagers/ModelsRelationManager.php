@@ -29,6 +29,10 @@ class ModelsRelationManager extends RelationManager
         return $schema
             ->components([
                 TextInput::make('name')->label(__('Name'))->required()->maxLength(255),
+                TextInput::make('name_ar')
+                    ->label(__('Name (Arabic)'))
+                    ->helperText(__('Optional — falls back to the Latin name.'))
+                    ->maxLength(255),
                 TextInput::make('sort_order')->label(__('Sort order'))->numeric()->default(0),
                 Toggle::make('is_active')->label(__('Active'))->default(true)->inline(false),
             ])
@@ -42,6 +46,7 @@ class ModelsRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 TextColumn::make('name')->label(__('Name'))->searchable(),
+                TextColumn::make('name_ar')->label(__('Name (Arabic)'))->placeholder('—')->searchable(),
                 IconColumn::make('is_active')->label(__('Active'))->boolean(),
             ])
             ->headerActions([CreateAction::make()->label(__('Add model'))])

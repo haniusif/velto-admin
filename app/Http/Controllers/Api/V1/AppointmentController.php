@@ -12,6 +12,7 @@ use App\Models\TimeSlot;
 use App\Models\WalletTransaction;
 use App\Models\WashPackage;
 use App\Services\ARB\ArbGateway;
+use App\Services\Booking\BookingFactory;
 use App\Services\Notifications\NotificationDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ class AppointmentController extends Controller
     public function __construct(
         private readonly ArbGateway $arb,
         private readonly NotificationDispatcher $notifications,
+        private readonly BookingFactory $bookings,
     ) {
     }
 
@@ -313,42 +315,7 @@ class AppointmentController extends Controller
      */
     private function resolveBooking($customer, array $data): array
     {
-        $vehicle = $customer->vehicles()->find($data['vehicle_id']);
-        if (! $vehicle) {
-            throw ValidationException::withMessages(['vehicle_id' => ['Vehicle not found.']]);
-        }
-
-        $package = WashPackage::where('is_active', true)->find($data['wash_package_id']);
-        if (! $package) {
-            throw ValidationException::withMessages(['wash_package_id' => ['Service not found.']]);
-        }
-
-        $addOns = collect();
-        if (! empty($data['add_on_ids'])) {
-            $addOns = PackageAddOn::where('wash_package_id', $package->id)
-                ->where('is_active', true)
-                ->whereIn('id', $data['add_on_ids'])
-                ->get();
-
-            if ($addOns->count() !== count(array_unique($data['add_on_ids']))) {
-                throw ValidationException::withMessages([
-                    'add_on_ids' => ['One or more add-ons are invalid for this service.'],
-                ]);
-            }
-        }
-
-        $base = (float) $package->price;
-        $addonsTotal = (float) $addOns->sum('extra_price');
-
-        return [
-            'vehicle' => $vehicle,
-            'package' => $package,
-            'addOns' => $addOns,
-            'base' => $base,
-            'addonsTotal' => $addonsTotal,
-            'total' => round($base + $addonsTotal, 2),
-            'location' => $data['location'] ?? [],
-        ];
+        return $this->bookings->resolveBooking($customer, $data);
     }
 
     private function createWalletBooking($customer, array $b, array $data): JsonResponse
@@ -676,37 +643,7 @@ class AppointmentController extends Controller
     /** Build the appointment column set shared by wallet and card flows. */
     private function attributes(array $b, TimeSlot $slot, array $data, string $status, string $paymentMethod, string $paymentStatus): array
     {
-        $vehicle = $b['vehicle'];
-        $location = $b['location'];
-
-        return [
-            'vehicle_id' => $vehicle->id,
-            'wash_package_id' => $b['package']->id,
-            'time_slot_id' => $slot->id,
-            'status' => $status,
-            'scheduled_at' => Carbon::parse($slot->date->toDateString().' '.$slot->start_time),
-            'address_label' => $location['label'] ?? null,
-            'latitude' => $location['lat'] ?? null,
-            'longitude' => $location['lng'] ?? null,
-            'area_id' => $location['area_id'] ?? null,
-            'zone_id' => $location['zone_id'] ?? null,
-            'service_name' => $b['package']->name,
-            'service_name_ar' => $b['package']->name_ar,
-            'vehicle_label' => trim("{$vehicle->brand} {$vehicle->model}").
-                ($vehicle->plate ? " · {$vehicle->plate}" : ''),
-            'add_ons' => $b['addOns']->map(fn (PackageAddOn $a) => [
-                'id' => $a->id,
-                'name' => $a->name,
-                'name_ar' => $a->name_ar,
-                'extra_price' => (float) $a->extra_price,
-            ])->values()->all(),
-            'base_price' => $b['base'],
-            'addons_total' => $b['addonsTotal'],
-            'total_price' => $b['total'],
-            'payment_method' => $paymentMethod,
-            'payment_status' => $paymentStatus,
-            'notes' => $data['notes'] ?? null,
-        ];
+        return $this->bookings->attributes($b, $slot, $data, $status, $paymentMethod, $paymentStatus);
     }
 
     /** Lock a bookable slot row and validate it; throws on unavailable/full/past. */
@@ -825,28 +762,7 @@ class AppointmentController extends Controller
 
     private function lockBookableSlot(int $slotId): TimeSlot
     {
-        $slot = TimeSlot::where('is_active', true)->lockForUpdate()->find($slotId);
-
-        if (! $slot) {
-            throw ValidationException::withMessages([
-                'time_slot_id' => ['This time slot is no longer available.'],
-            ]);
-        }
-
-        $scheduledAt = Carbon::parse($slot->date->toDateString().' '.$slot->start_time);
-        if ($scheduledAt->isPast()) {
-            throw ValidationException::withMessages([
-                'time_slot_id' => ['This time slot is in the past.'],
-            ]);
-        }
-
-        if ($slot->booked_count >= $slot->capacity) {
-            throw ValidationException::withMessages([
-                'time_slot_id' => ['This time slot is fully booked.'],
-            ]);
-        }
-
-        return $slot;
+        return $this->bookings->lockBookableSlot($slotId);
     }
 
     private function releaseSlot(?int $slotId): void

@@ -10,6 +10,7 @@ class VehicleModelEntry extends Model
     protected $fillable = [
         'vehicle_brand_id',
         'name',
+        'name_ar',
         'sort_order',
         'is_active',
     ];

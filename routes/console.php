@@ -14,3 +14,7 @@ Schedule::command('bookings:cancel-stale')->everyFiveMinutes();
 
 // Dispatch backstop: expire stale offers, retry the waiting-assignment queue.
 Schedule::command('dispatch:sweep')->everyMinute()->withoutOverlapping();
+
+// Settle lapsed prepaid plans. Expiry is already enforced live, so this only
+// keeps the stored status honest for reporting — hourly is ample.
+Schedule::command('packages:expire')->hourly();

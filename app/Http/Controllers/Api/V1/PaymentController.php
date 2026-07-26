@@ -129,9 +129,10 @@ class PaymentController extends Controller
                 'response_payload' => $parsed['raw'],
             ]);
 
-            if ($appointment && $appointment->status === Appointment::STATUS_PENDING) {
-                $this->confirmPaidAppointment($appointment, $payment);
-            } elseif ($payment->purpose === 'package_purchase') {
+            // Order matters: a plan bought together with its first visit must
+            // be activated BEFORE the booking is confirmed, because confirming
+            // spends a visit and an inactive plan has none to give.
+            if ($payment->purpose === 'package_purchase') {
                 // Start the validity window now, not at purchase — a card plan
                 // must not count down while the customer is on the hosted page.
                 $plan = $payment->customerPackage;
@@ -139,6 +140,10 @@ class PaymentController extends Controller
                     $plan->loadMissing('washPackage');
                     $plan->activate();
                 }
+            }
+
+            if ($appointment && $appointment->status === Appointment::STATUS_PENDING) {
+                $this->confirmPaidAppointment($appointment, $payment);
             } elseif ($payment->purpose === 'wallet_topup') {
                 // Credit the wallet (the create() hook increments wallet_balance).
                 $payment->customer?->walletTransactions()->create([
@@ -159,7 +164,8 @@ class PaymentController extends Controller
         ]);
 
         // A plan that was never paid for is dead — nothing to release, since
-        // visits only become spendable on capture.
+        // visits only become spendable on capture. Its first booking goes with
+        // it: there is no plan left to draw a visit from.
         if ($payment->purpose === 'package_purchase') {
             $payment->customerPackage?->update([
                 'payment_status' => 'failed',
