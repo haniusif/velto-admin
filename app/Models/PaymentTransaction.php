@@ -15,6 +15,7 @@ class PaymentTransaction extends Model
     protected $fillable = [
         'customer_id',
         'appointment_id',
+        'customer_package_id',
         'gateway',
         'purpose',
         'action',
@@ -39,6 +40,11 @@ class PaymentTransaction extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function customerPackage(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPackage::class);
     }
 
     public function appointment(): BelongsTo

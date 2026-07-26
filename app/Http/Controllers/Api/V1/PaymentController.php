@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\CustomerPackage;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
 use App\Models\WalletTransaction;
@@ -130,6 +131,14 @@ class PaymentController extends Controller
 
             if ($appointment && $appointment->status === Appointment::STATUS_PENDING) {
                 $this->confirmPaidAppointment($appointment, $payment);
+            } elseif ($payment->purpose === 'package_purchase') {
+                // Start the validity window now, not at purchase — a card plan
+                // must not count down while the customer is on the hosted page.
+                $plan = $payment->customerPackage;
+                if ($plan && $plan->status === CustomerPackage::STATUS_PENDING) {
+                    $plan->loadMissing('washPackage');
+                    $plan->activate();
+                }
             } elseif ($payment->purpose === 'wallet_topup') {
                 // Credit the wallet (the create() hook increments wallet_balance).
                 $payment->customer?->walletTransactions()->create([
@@ -148,6 +157,15 @@ class PaymentController extends Controller
             'result_code' => $parsed['result'],
             'response_payload' => $parsed['raw'],
         ]);
+
+        // A plan that was never paid for is dead — nothing to release, since
+        // visits only become spendable on capture.
+        if ($payment->purpose === 'package_purchase') {
+            $payment->customerPackage?->update([
+                'payment_status' => 'failed',
+                'status' => CustomerPackage::STATUS_CANCELLED,
+            ]);
+        }
 
         // Declined / failed → cancel the pending booking. No slot to free: a seat
         // is only consumed on capture, never held for an unpaid booking.
@@ -188,6 +206,36 @@ class PaymentController extends Controller
                 ]);
 
                 return;
+            }
+
+            // A plan booking's add-ons have now been paid, so the visit is
+            // finally spent — deliberately here and not at creation, so an
+            // abandoned payment never costs the customer a visit.
+            if ($appointment->isPackageCovered()) {
+                $plan = CustomerPackage::lockForUpdate()->find($appointment->customer_package_id);
+
+                if (! $plan || ! $plan->isUsable()) {
+                    // The plan ran out or lapsed while they were paying. Refund
+                    // the add-ons and cancel rather than booking a visit that
+                    // does not exist.
+                    $appointment->customer?->walletTransactions()->create([
+                        'kind' => WalletTransaction::KIND_REFUND,
+                        'amount' => (float) $payment->amount,
+                        'note' => "Refund — booking #{$appointment->id}: plan no longer usable",
+                    ]);
+                    $appointment->update([
+                        'status' => Appointment::STATUS_CANCELLED,
+                        'payment_status' => 'refunded',
+                        'cancelled_at' => now(),
+                    ]);
+                    Log::warning('Paid plan booking refunded — plan unusable at capture', [
+                        'appointment' => $appointment->id,
+                    ]);
+
+                    return;
+                }
+
+                $plan->increment('visits_used');
             }
 
             $slot?->increment('booked_count');

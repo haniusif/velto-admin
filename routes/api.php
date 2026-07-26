@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CustomerDeviceController;
+use App\Http\Controllers\Api\V1\CustomerPackageController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -72,6 +73,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('/vehicles/{vehicle}', [VehicleController::class, 'update']);
         Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
         Route::post('/vehicles/{vehicle}/default', [VehicleController::class, 'setDefault']);
+
+        // Prepaid multi-visit plans
+        Route::get('/packages', [CustomerPackageController::class, 'index']);
+        Route::post('/packages', [CustomerPackageController::class, 'store']);
 
         // Wallet
         Route::get('/wallet', [WalletController::class, 'show']);

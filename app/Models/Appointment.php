@@ -16,10 +16,10 @@ class Appointment extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
 
-    /** Statuses that count as "upcoming" (still actionable). */
     /** How close to the slot a customer may still cancel their own booking. */
     public const CANCELLATION_CUTOFF_HOURS = 4;
 
+    /** Statuses that count as "upcoming" (still actionable). */
     public const ACTIVE_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_CONFIRMED,
@@ -33,6 +33,7 @@ class Appointment extends Model
         'worker_id',
         'vehicle_id',
         'wash_package_id',
+        'customer_package_id',
         'time_slot_id',
         'wallet_transaction_id',
         'status',
@@ -190,6 +191,17 @@ class Appointment extends Model
         return Attribute::get(
             fn (): bool => in_array($this->status, self::ACTIVE_STATUSES, true)
         );
+    }
+
+    public function customerPackage(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPackage::class);
+    }
+
+    /** Paid for with a plan visit rather than money. */
+    public function isPackageCovered(): bool
+    {
+        return $this->payment_method === 'package' && $this->customer_package_id !== null;
     }
 
     /** Can be cancelled/rescheduled only while still active and in the future. */

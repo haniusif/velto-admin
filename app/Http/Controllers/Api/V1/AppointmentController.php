@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
+use App\Models\CustomerPackage;
 use App\Models\PackageAddOn;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
@@ -22,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
-    private const WITH = ['washPackage', 'vehicle', 'timeSlot', 'area', 'zone'];
+    private const WITH = ['washPackage', 'customerPackage', 'vehicle', 'timeSlot', 'area', 'zone'];
 
     public function __construct(
         private readonly ArbGateway $arb,
@@ -66,7 +67,9 @@ class AppointmentController extends Controller
             'time_slot_id' => ['required', 'integer'],
             'add_on_ids' => ['nullable', 'array'],
             'add_on_ids.*' => ['integer'],
-            'payment_method' => ['required', 'string', 'in:wallet,card,apple_pay'],
+            'payment_method' => ['required', 'string', 'in:wallet,card,apple_pay,package'],
+            'customer_package_id' => ['nullable', 'integer'],
+            'addons_payment_method' => ['nullable', 'string', 'in:wallet,card,apple_pay'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'location' => ['nullable', 'array'],
             'location.label' => ['nullable', 'string', 'max:255'],
@@ -78,6 +81,10 @@ class AppointmentController extends Controller
 
         $customer = $request->user();
         $booking = $this->resolveBooking($customer, $data);
+
+        if ($data['payment_method'] === 'package') {
+            return $this->createPackageBooking($request, $customer, $booking, $data);
+        }
 
         if ($data['payment_method'] === 'wallet') {
             return $this->createWalletBooking($customer, $booking, $data);
@@ -105,14 +112,22 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        $isCardPaid = $appointment->payment_method !== 'wallet'
-            && $appointment->payment_status === 'paid';
+        // A plan booking cost a visit plus, if it had add-ons, money. The visit
+        // is refunded in kind; the money follows the usual rules — and for a
+        // plan booking the method isn't in payment_method, so a captured
+        // transaction is what says whether it was a card.
+        $isPackageCovered = $appointment->isPackageCovered();
+
+        $isCardPaid = $appointment->payment_status === 'paid'
+            && ($isPackageCovered
+                ? (float) $appointment->total_price > 0 && $this->hasCapturedCard($appointment)
+                : $appointment->payment_method !== 'wallet');
 
         // Captured before the update so the notification still reaches the
         // worker even if the assignment is cleared later.
         $assignedWorkerId = $appointment->worker_id;
 
-        DB::transaction(function () use ($appointment, $isCardPaid) {
+        DB::transaction(function () use ($appointment, $isCardPaid, $isPackageCovered) {
             $appointment->update([
                 'status' => Appointment::STATUS_CANCELLED,
                 'cancelled_at' => now(),
@@ -120,8 +135,24 @@ class AppointmentController extends Controller
 
             $this->releaseSlot($appointment->time_slot_id);
 
-            // Wallet refund is an internal ledger entry; card refund is external (below).
-            if ($appointment->payment_status === 'paid' && ! $isCardPaid) {
+            // Give the visit back. Guarded so a double-cancel cannot mint
+            // visits, and the plan's own expiry still applies to the returned
+            // one — a refund does not extend the window. A booking still
+            // awaiting its add-ons payment never spent a visit, so there is
+            // nothing to return.
+            if ($isPackageCovered && $appointment->payment_status === 'paid') {
+                $plan = CustomerPackage::lockForUpdate()->find($appointment->customer_package_id);
+                if ($plan && $plan->visits_used > 0) {
+                    $plan->decrement('visits_used');
+                }
+            }
+
+            // Wallet refund is an internal ledger entry; card refund is external
+            // (below). Only add-ons carry a charge on a plan booking, so a
+            // zero-total one has nothing further to refund.
+            if ($appointment->payment_status === 'paid'
+                && ! $isCardPaid
+                && (float) $appointment->total_price > 0) {
                 $appointment->customer->walletTransactions()->create([
                     'kind' => WalletTransaction::KIND_REFUND,
                     'amount' => (float) $appointment->total_price,
@@ -360,6 +391,204 @@ class AppointmentController extends Controller
             'data' => [
                 'appointment' => new AppointmentResource($appointment),
                 'payment' => ['method' => 'wallet', 'status' => 'paid', 'payment_page_url' => null],
+            ],
+        ], 201);
+    }
+
+    /**
+     * Book against a prepaid plan. The visit pays for the service itself; any
+     * add-ons are extra and still have to be paid for, by wallet inline or by
+     * card through the hosted page.
+     *
+     * The plan row is locked for the whole check-and-decrement so two bookings
+     * racing for the last visit cannot both take it — the same reason the slot
+     * is locked.
+     */
+    private function createPackageBooking(Request $request, $customer, array $b, array $data): JsonResponse
+    {
+        $planId = $data['customer_package_id'] ?? null;
+        if (! $planId) {
+            throw ValidationException::withMessages([
+                'customer_package_id' => ['Choose which plan to use.'],
+            ]);
+        }
+
+        $extras = (float) $b['addonsTotal'];
+        $extrasMethod = $data['addons_payment_method'] ?? 'wallet';
+        $payByCard = $extras > 0 && $extrasMethod !== 'wallet';
+
+        if ($payByCard && ! $this->arb->isConfigured()) {
+            throw ValidationException::withMessages([
+                'addons_payment_method' => ['Card payment is not available yet. Please pay with your wallet.'],
+            ]);
+        }
+
+        if ($extras > 0 && ! $payByCard && (float) $customer->wallet_balance < $extras) {
+            throw ValidationException::withMessages([
+                'addons_payment_method' => ['Insufficient wallet balance for the add-ons.'],
+            ]);
+        }
+
+        [$appointment, $payment] = DB::transaction(function () use ($customer, $b, $data, $planId, $extras, $payByCard, $extrasMethod) {
+            $plan = $this->lockUsablePlan($customer, $planId, $b);
+
+            $slot = $this->lockBookableSlot($data['time_slot_id']);
+
+            $attributes = $this->attributes(
+                $b, $slot, $data,
+                // Unpaid extras leave the booking pending, exactly like a card
+                // booking: the seat and the visit are only taken on capture.
+                status: $payByCard ? Appointment::STATUS_PENDING : Appointment::STATUS_CONFIRMED,
+                paymentMethod: 'package',
+                paymentStatus: $payByCard ? 'pending' : 'paid',
+            );
+
+            // The visit covers the service; only the add-ons carry a charge.
+            $attributes['base_price'] = 0.0;
+            $attributes['addons_total'] = $extras;
+            $attributes['total_price'] = $extras;
+            $attributes['customer_package_id'] = $plan->id;
+
+            $appointment = $customer->appointments()->create($attributes);
+
+            if ($payByCard) {
+                $payment = PaymentTransaction::create([
+                    'customer_id' => $customer->id,
+                    'appointment_id' => $appointment->id,
+                    'gateway' => 'arb',
+                    'action' => 'purchase',
+                    'status' => PaymentTransaction::STATUS_PENDING,
+                    'amount' => $extras,
+                    'currency' => 'SAR',
+                    'track_id' => $this->bookingTrackId($appointment),
+                ]);
+
+                return [$appointment, $payment];
+            }
+
+            if ($extras > 0) {
+                $tx = $customer->walletTransactions()->create([
+                    'kind' => WalletTransaction::KIND_BOOKING,
+                    'amount' => -$extras,
+                    'note' => "Booking #{$appointment->id} — add-ons",
+                ]);
+                $appointment->update(['wallet_transaction_id' => $tx->id]);
+            }
+
+            $plan->increment('visits_used');
+            $slot->increment('booked_count');
+
+            return [$appointment, null];
+        });
+
+        if ($payment !== null) {
+            return $this->startExtrasPayment($request, $customer, $appointment, $payment, $extras, $extrasMethod);
+        }
+
+        $this->notifyBooked($appointment);
+        $appointment->load(self::WITH);
+
+        return response()->json([
+            'data' => [
+                'appointment' => new AppointmentResource($appointment),
+                'payment' => [
+                    'method' => $extras > 0 ? 'wallet' : 'package',
+                    'status' => 'paid',
+                    'payment_page_url' => null,
+                ],
+            ],
+        ], 201);
+    }
+
+    /**
+     * Load the plan under a row lock and check it can pay for this booking.
+     * Shared by the create path so every refusal reads the same.
+     */
+    private function lockUsablePlan($customer, int $planId, array $b): CustomerPackage
+    {
+        /** @var CustomerPackage|null $plan */
+        $plan = $customer->packages()->lockForUpdate()->find($planId);
+
+        if (! $plan) {
+            throw ValidationException::withMessages([
+                'customer_package_id' => ['Plan not found.'],
+            ]);
+        }
+
+        if ($plan->wash_package_id !== $b['package']->id) {
+            throw ValidationException::withMessages([
+                'customer_package_id' => ['This plan does not cover the selected service.'],
+            ]);
+        }
+
+        if ($plan->vehicle_id !== $b['vehicle']->id) {
+            throw ValidationException::withMessages([
+                'customer_package_id' => ['This plan is locked to a different vehicle.'],
+            ]);
+        }
+
+        if (! $plan->isUsable()) {
+            throw ValidationException::withMessages([
+                'customer_package_id' => [$plan->visitsRemaining() < 1
+                    ? 'This plan has no visits left.'
+                    : 'This plan is not active.'],
+            ]);
+        }
+
+        return $plan;
+    }
+
+    /** Mint the hosted-page token for a plan booking's unpaid add-ons. */
+    private function startExtrasPayment(
+        Request $request,
+        $customer,
+        Appointment $appointment,
+        PaymentTransaction $payment,
+        float $extras,
+        string $method,
+    ): JsonResponse {
+        try {
+            $token = $this->arb->createPurchaseToken([
+                'amount' => $extras,
+                'track_id' => $payment->track_id,
+                'response_url' => $this->callbackUrl('callback'),
+                'error_url' => $this->callbackUrl('error'),
+                'lang' => $customer->preferred_language,
+                'customer_ip' => $request->ip(),
+            ]);
+        } catch (\Throwable $e) {
+            // Compensate: nothing was consumed — no seat, no visit.
+            DB::transaction(function () use ($appointment, $payment, $e) {
+                $appointment->update([
+                    'status' => Appointment::STATUS_CANCELLED,
+                    'cancelled_at' => now(),
+                ]);
+                $payment->update([
+                    'status' => PaymentTransaction::STATUS_FAILED,
+                    'error_text' => mb_substr($e->getMessage(), 0, 250),
+                ]);
+            });
+            Log::warning('ARB add-ons token generation failed', [
+                'appointment' => $appointment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Could not start card payment. Please try again.',
+            ], 502);
+        }
+
+        $payment->update(['payment_id' => $token['payment_id']]);
+        $appointment->load(self::WITH);
+
+        return response()->json([
+            'data' => [
+                'appointment' => new AppointmentResource($appointment),
+                'payment' => [
+                    'method' => $method,
+                    'status' => 'pending',
+                    'payment_page_url' => $token['payment_url'],
+                ],
             ],
         ], 201);
     }
@@ -629,6 +858,14 @@ class AppointmentController extends Controller
         if ($slot && $slot->booked_count > 0) {
             $slot->decrement('booked_count');
         }
+    }
+
+    /** Whether a captured card payment exists for this booking. */
+    private function hasCapturedCard(Appointment $appointment): bool
+    {
+        return PaymentTransaction::where('appointment_id', $appointment->id)
+            ->where('status', PaymentTransaction::STATUS_CAPTURED)
+            ->exists();
     }
 
     private function refundCard(Appointment $appointment): void

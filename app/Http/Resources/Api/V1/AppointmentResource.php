@@ -69,6 +69,18 @@ class AppointmentResource extends JsonResource
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
 
+            // Live plan progress when this booking was paid with a visit, so
+            // the app can show "wash N of T" without a second request.
+            'package' => $this->when(
+                $this->customer_package_id !== null && $this->relationLoaded('customerPackage'),
+                fn () => [
+                    'id' => (string) $this->customer_package_id,
+                    'visits_total' => (int) $this->customerPackage?->visits_total,
+                    'visits_used' => (int) $this->customerPackage?->visits_used,
+                    'expires_at' => optional($this->customerPackage?->expires_at)?->toIso8601String(),
+                ],
+            ),
+
             'can_cancel' => $this->resource->canCancel(),
             'can_reschedule' => $this->resource->isActionable(),
             'can_pay' => $this->resource->canPay(),
