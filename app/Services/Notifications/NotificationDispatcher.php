@@ -48,6 +48,22 @@ class NotificationDispatcher
             ]);
     }
 
+    /**
+     * The customer cancelled a job that already had a worker on it. Without
+     * this the job only disappears from their list on the next refresh, so a
+     * specialist already on the way keeps driving to a cancelled booking.
+     */
+    public function workerJobCancelled(Appointment $a, ?int $workerId = null): void
+    {
+        $when = $a->scheduled_at?->format('Y-m-d H:i');
+        $serviceAr = $a->service_name_ar ?: $a->service_name;
+
+        $this->toWorker($workerId ?? $a->worker_id, WorkerNotification::KIND_CANCELLED,
+            'Job cancelled', 'تم إلغاء المهمة',
+            trim("{$a->service_name} — {$when}"), trim("{$serviceAr} — {$when}"),
+            ['appointment_id' => $a->id]);
+    }
+
     /** A worker lost a job to reassignment. */
     public function workerReassignedAway(int $workerId, Appointment $a): void
     {

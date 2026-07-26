@@ -92,16 +92,25 @@ class AppointmentController extends Controller
         $this->authorizeOwn($request, $appointment);
 
         if (! $appointment->canCancel()) {
-            throw ValidationException::withMessages([
-                'appointment' => [sprintf(
+            // A machine-readable code so the app can show this in the user's
+            // language — `message` stays as an English fallback for anything
+            // that doesn't recognise the code.
+            return response()->json([
+                'message' => sprintf(
                     'Bookings can only be cancelled more than %d hours before the appointment. Please contact support.',
                     Appointment::CANCELLATION_CUTOFF_HOURS,
-                )],
-            ]);
+                ),
+                'code' => 'cancellation_window_closed',
+                'cutoff_hours' => Appointment::CANCELLATION_CUTOFF_HOURS,
+            ], 422);
         }
 
         $isCardPaid = $appointment->payment_method !== 'wallet'
             && $appointment->payment_status === 'paid';
+
+        // Captured before the update so the notification still reaches the
+        // worker even if the assignment is cleared later.
+        $assignedWorkerId = $appointment->worker_id;
 
         DB::transaction(function () use ($appointment, $isCardPaid) {
             $appointment->update([
@@ -125,6 +134,10 @@ class AppointmentController extends Controller
         if ($isCardPaid) {
             $this->refundCard($appointment);
         }
+
+        // Outside the transaction: a push failure must not roll back a
+        // cancellation the customer has already been told succeeded.
+        $this->notifications->workerJobCancelled($appointment, $assignedWorkerId);
 
         $appointment->load(self::WITH);
 
