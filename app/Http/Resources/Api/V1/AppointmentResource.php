@@ -69,7 +69,7 @@ class AppointmentResource extends JsonResource
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
 
-            'can_cancel' => $this->resource->isActionable(),
+            'can_cancel' => $this->resource->canCancel(),
             'can_reschedule' => $this->resource->isActionable(),
             'can_pay' => $this->resource->canPay(),
 

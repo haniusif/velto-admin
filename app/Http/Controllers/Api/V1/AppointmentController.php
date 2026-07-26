@@ -91,9 +91,12 @@ class AppointmentController extends Controller
     {
         $this->authorizeOwn($request, $appointment);
 
-        if (! $appointment->isActionable()) {
+        if (! $appointment->canCancel()) {
             throw ValidationException::withMessages([
-                'appointment' => ['This booking can no longer be cancelled.'],
+                'appointment' => [sprintf(
+                    'Bookings can only be cancelled more than %d hours before the appointment. Please contact support.',
+                    Appointment::CANCELLATION_CUTOFF_HOURS,
+                )],
             ]);
         }
 

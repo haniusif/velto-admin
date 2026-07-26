@@ -17,6 +17,9 @@ class Appointment extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     /** Statuses that count as "upcoming" (still actionable). */
+    /** How close to the slot a customer may still cancel their own booking. */
+    public const CANCELLATION_CUTOFF_HOURS = 4;
+
     public const ACTIVE_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_CONFIRMED,
@@ -195,6 +198,19 @@ class Appointment extends Model
         return in_array($this->status, self::ACTIVE_STATUSES, true)
             && $this->scheduled_at !== null
             && $this->scheduled_at->isFuture();
+    }
+
+    /**
+     * A customer may cancel only while the booking is still more than
+     * CANCELLATION_CUTOFF_HOURS from its slot. Closer than that the specialist
+     * is already being routed, so a cancellation costs a wasted trip — those
+     * go through support instead.
+     */
+    public function canCancel(): bool
+    {
+        return in_array($this->status, self::ACTIVE_STATUSES, true)
+            && $this->scheduled_at !== null
+            && $this->scheduled_at->isAfter(now()->addHours(self::CANCELLATION_CUTOFF_HOURS));
     }
 
     /**
