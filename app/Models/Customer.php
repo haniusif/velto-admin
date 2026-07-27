@@ -52,6 +52,11 @@ class Customer extends Authenticatable
         return $this->hasMany(CustomerNotification::class);
     }
 
+    public function savedAddresses(): HasMany
+    {
+        return $this->hasMany(SavedAddress::class);
+    }
+
     public function packages(): HasMany
     {
         return $this->hasMany(CustomerPackage::class);

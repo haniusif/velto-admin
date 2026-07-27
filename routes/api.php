@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CustomerDeviceController;
 use App\Http\Controllers\Api\V1\CustomerPackageController;
 use App\Http\Controllers\Api\V1\PromoCodeController;
+use App\Http\Controllers\Api\V1\SavedAddressController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -78,6 +79,11 @@ Route::prefix('v1')->group(function () {
         // Prepaid multi-visit plans
         Route::get('/packages', [CustomerPackageController::class, 'index']);
         Route::post('/packages', [CustomerPackageController::class, 'store']);
+
+        // Saved addresses
+        Route::get('/addresses', [SavedAddressController::class, 'index']);
+        Route::post('/addresses', [SavedAddressController::class, 'store']);
+        Route::delete('/addresses/{address}', [SavedAddressController::class, 'destroy']);
 
         // Promo codes
         Route::post('/promo/preview', [PromoCodeController::class, 'preview']);
