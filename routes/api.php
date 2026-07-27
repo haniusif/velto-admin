@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CustomerDeviceController;
 use App\Http\Controllers\Api\V1\CustomerPackageController;
 use App\Http\Controllers\Api\V1\PromoCodeController;
 use App\Http\Controllers\Api\V1\SavedAddressController;
+use App\Http\Controllers\Api\V1\WorkerLocationController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -103,6 +104,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
         Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
         Route::post('/appointments/{appointment}/review', [AppointmentController::class, 'review']);
+        Route::get('/appointments/{appointment}/tracking', [AppointmentController::class, 'tracking']);
         Route::post('/appointments/{appointment}/pay', [AppointmentController::class, 'pay']);
         Route::post('/appointments/{appointment}/verify-payment', [AppointmentController::class, 'verifyPayment']);
         Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
@@ -124,6 +126,10 @@ Route::prefix('v1')->group(function () {
             // Push device registration (FCM tokens)
             Route::post('/devices', [WorkerDeviceController::class, 'store']);
             Route::delete('/devices', [WorkerDeviceController::class, 'destroy']);
+
+            // Live position while on a job
+            Route::post('/location', [WorkerLocationController::class, 'store']);
+            Route::delete('/location', [WorkerLocationController::class, 'destroy']);
 
             // Duty & dispatch offers
             Route::post('/duty', [WorkerDutyController::class, 'setDuty']);

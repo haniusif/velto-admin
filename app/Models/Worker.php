@@ -70,6 +70,11 @@ class Worker extends Authenticatable
         return $this->hasMany(Appointment::class);
     }
 
+    public function location(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(WorkerLocation::class);
+    }
+
     public function workerNotifications(): HasMany
     {
         return $this->hasMany(WorkerNotification::class);

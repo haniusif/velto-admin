@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\WorkerJobResource;
 use App\Models\Appointment;
+use App\Models\WorkerLocation;
 use App\Models\CustomerNotification;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
@@ -157,6 +158,11 @@ class WorkerJobController extends Controller
             'status' => Appointment::STATUS_COMPLETED,
             'completed_at' => now(),
         ]);
+
+        // The job is over, so the reason for holding a live position is too.
+        // Kept narrow deliberately: a position that outlives its booking is
+        // staff tracking, not a feature.
+        WorkerLocation::where('worker_id', $request->user()->id)->delete();
 
         $this->notifyCustomer($appointment, CustomerNotification::KIND_COMPLETED,
             'Service completed', 'تم إنجاز الخدمة',

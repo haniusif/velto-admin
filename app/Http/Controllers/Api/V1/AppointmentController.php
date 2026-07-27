@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\AppointmentReview;
 use App\Models\CustomerPackage;
+use App\Models\WorkerLocation;
 use App\Models\PackageAddOn;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
@@ -178,6 +179,54 @@ class AppointmentController extends Controller
         $appointment->load(self::WITH);
 
         return response()->json(['data' => new AppointmentResource($appointment)]);
+    }
+
+    /**
+     * GET /api/v1/me/appointments/{appointment}/tracking
+     *
+     * Where the specialist is, but only while they are actually coming: on the
+     * way or arrived. Before that there is nothing to show, and afterwards
+     * they are at the car, so a live dot serves no purpose and only prolongs
+     * how long a staff position is exposed.
+     */
+    public function tracking(Request $request, Appointment $appointment): JsonResponse
+    {
+        $this->authorizeOwn($request, $appointment);
+
+        $trackable = in_array($appointment->status, [
+            Appointment::STATUS_ON_THE_WAY,
+            Appointment::STATUS_ARRIVED,
+        ], true);
+
+        $location = $trackable && $appointment->worker_id
+            ? WorkerLocation::where('worker_id', $appointment->worker_id)->first()
+            : null;
+
+        // A stale dot is worse than none: it asserts a position the specialist
+        // may have left minutes ago.
+        $live = $location !== null && $location->isFresh();
+
+        return response()->json([
+            'data' => [
+                'trackable' => $trackable,
+                'status' => $appointment->status,
+                'worker' => $appointment->worker_id ? [
+                    'name' => $appointment->worker?->name,
+                    'phone' => $appointment->worker?->phone,
+                ] : null,
+                'worker_location' => $live ? [
+                    'lat' => (float) $location->lat,
+                    'lng' => (float) $location->lng,
+                    'heading' => $location->heading === null ? null : (float) $location->heading,
+                    'updated_at' => $location->updated_at?->toIso8601String(),
+                ] : null,
+                'destination' => [
+                    'lat' => $appointment->latitude,
+                    'lng' => $appointment->longitude,
+                    'label' => $appointment->address_label,
+                ],
+            ],
+        ]);
     }
 
     /**
