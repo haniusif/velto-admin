@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
+use App\Models\AppointmentReview;
 use App\Models\CustomerPackage;
 use App\Models\PackageAddOn;
 use App\Models\PaymentTransaction;
@@ -24,7 +25,7 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
-    private const WITH = ['washPackage', 'customerPackage', 'vehicle', 'timeSlot', 'area', 'zone'];
+    private const WITH = ['washPackage', 'customerPackage', 'review', 'vehicle', 'timeSlot', 'area', 'zone'];
 
     public function __construct(
         private readonly ArbGateway $arb,
@@ -72,6 +73,7 @@ class AppointmentController extends Controller
             'payment_method' => ['required', 'string', 'in:wallet,card,apple_pay,package'],
             'customer_package_id' => ['nullable', 'integer'],
             'addons_payment_method' => ['nullable', 'string', 'in:wallet,card,apple_pay'],
+            'promo_code' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'location' => ['nullable', 'array'],
             'location.label' => ['nullable', 'string', 'max:255'],
@@ -136,6 +138,7 @@ class AppointmentController extends Controller
             ]);
 
             $this->releaseSlot($appointment->time_slot_id);
+            $appointment->releasePromoCode();
 
             // Give the visit back. Guarded so a double-cancel cannot mint
             // visits, and the plan's own expiry still applies to the returned
@@ -172,6 +175,57 @@ class AppointmentController extends Controller
         // cancellation the customer has already been told succeeded.
         $this->notifications->workerJobCancelled($appointment, $assignedWorkerId);
 
+        $appointment->load(self::WITH);
+
+        return response()->json(['data' => new AppointmentResource($appointment)]);
+    }
+
+    /**
+     * POST /api/v1/me/appointments/{appointment}/review
+     *
+     * Rate a finished job. One review per appointment — the unique index is
+     * the real guard; this check just turns a database error into a message.
+     */
+    public function review(Request $request, Appointment $appointment): JsonResponse
+    {
+        $this->authorizeOwn($request, $appointment);
+
+        $data = $request->validate([
+            'rating' => ['required', 'integer', 'min:'.AppointmentReview::MIN_RATING, 'max:'.AppointmentReview::MAX_RATING],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($appointment->status !== Appointment::STATUS_COMPLETED) {
+            return response()->json([
+                'message' => 'Only completed bookings can be rated.',
+                'code' => 'booking_not_completed',
+            ], 422);
+        }
+
+        if ($appointment->review !== null) {
+            return response()->json([
+                'message' => 'This booking has already been rated.',
+                'code' => 'already_reviewed',
+            ], 422);
+        }
+
+        $review = DB::transaction(function () use ($appointment, $data) {
+            $review = AppointmentReview::create([
+                'appointment_id' => $appointment->id,
+                'customer_id' => $appointment->customer_id,
+                'worker_id' => $appointment->worker_id,
+                'rating' => $data['rating'],
+                'comment' => $data['comment'] ?? null,
+            ]);
+
+            // Keep the worker's headline rating in step with the review that
+            // just landed, inside the same transaction.
+            AppointmentReview::refreshWorkerRating($appointment->worker_id);
+
+            return $review;
+        });
+
+        $appointment->setRelation('review', $review);
         $appointment->load(self::WITH);
 
         return response()->json(['data' => new AppointmentResource($appointment)]);

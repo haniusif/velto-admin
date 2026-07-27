@@ -3,6 +3,7 @@
 namespace App\Services\Booking;
 
 use App\Models\PackageAddOn;
+use App\Models\PromoCode;
 use App\Models\TimeSlot;
 use App\Models\WashPackage;
 use Carbon\Carbon;
@@ -46,6 +47,29 @@ class BookingFactory
 
         $base = (float) $package->price;
         $addonsTotal = (float) $addOns->sum('extra_price');
+        $subtotal = round($base + $addonsTotal, 2);
+
+        // A promo code is resolved here so pricing has exactly one home: the
+        // quote the customer is shown and the row that gets written come from
+        // the same arithmetic.
+        $promo = null;
+        $discount = 0.0;
+        if (! empty($data['promo_code'])) {
+            $promo = PromoCode::findByCode($data['promo_code']);
+
+            if (! $promo) {
+                throw ValidationException::withMessages([
+                    'promo_code' => [PromoCode::REASON_NOT_FOUND],
+                ]);
+            }
+
+            $reason = $promo->rejectionReason($customer->id, $subtotal);
+            if ($reason !== null) {
+                throw ValidationException::withMessages(['promo_code' => [$reason]]);
+            }
+
+            $discount = $promo->discountFor($subtotal);
+        }
 
         return [
             'vehicle' => $vehicle,
@@ -53,7 +77,9 @@ class BookingFactory
             'addOns' => $addOns,
             'base' => $base,
             'addonsTotal' => $addonsTotal,
-            'total' => round($base + $addonsTotal, 2),
+            'promo' => $promo,
+            'discount' => $discount,
+            'total' => round($subtotal - $discount, 2),
             'location' => $data['location'] ?? [],
         ];
     }
@@ -86,6 +112,8 @@ class BookingFactory
             ])->values()->all(),
             'base_price' => $b['base'],
             'addons_total' => $b['addonsTotal'],
+            'discount_total' => $b['discount'] ?? 0,
+            'promo_code_id' => isset($b['promo']) ? $b['promo']?->id : null,
             'total_price' => $b['total'],
             'payment_method' => $paymentMethod,
             'payment_status' => $paymentStatus,

@@ -63,6 +63,7 @@ class AppointmentResource extends JsonResource
 
             'base_price' => (float) $this->base_price,
             'addons_total' => (float) $this->addons_total,
+            'discount_total' => (float) $this->discount_total,
             'total_price' => (float) $this->total_price,
             'currency' => 'SAR',
 
@@ -80,6 +81,12 @@ class AppointmentResource extends JsonResource
                     'expires_at' => optional($this->customerPackage?->expires_at)?->toIso8601String(),
                 ],
             ),
+
+            'can_review' => $this->resource->canReview(),
+            'review' => $this->whenLoaded('review', fn () => $this->review ? [
+                'rating' => (int) $this->review->rating,
+                'comment' => $this->review->comment,
+            ] : null),
 
             'can_cancel' => $this->resource->canCancel(),
             'can_reschedule' => $this->resource->isActionable(),

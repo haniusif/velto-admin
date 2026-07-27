@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CustomerDeviceController;
 use App\Http\Controllers\Api\V1\CustomerPackageController;
+use App\Http\Controllers\Api\V1\PromoCodeController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -78,6 +79,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/packages', [CustomerPackageController::class, 'index']);
         Route::post('/packages', [CustomerPackageController::class, 'store']);
 
+        // Promo codes
+        Route::post('/promo/preview', [PromoCodeController::class, 'preview']);
+
         // Wallet
         Route::get('/wallet', [WalletController::class, 'show']);
         Route::post('/wallet/topup', [WalletController::class, 'topUp']);
@@ -92,6 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
         Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
+        Route::post('/appointments/{appointment}/review', [AppointmentController::class, 'review']);
         Route::post('/appointments/{appointment}/pay', [AppointmentController::class, 'pay']);
         Route::post('/appointments/{appointment}/verify-payment', [AppointmentController::class, 'verifyPayment']);
         Route::patch('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);

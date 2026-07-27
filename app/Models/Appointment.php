@@ -34,6 +34,7 @@ class Appointment extends Model
         'vehicle_id',
         'wash_package_id',
         'customer_package_id',
+        'promo_code_id',
         'time_slot_id',
         'wallet_transaction_id',
         'status',
@@ -49,6 +50,7 @@ class Appointment extends Model
         'add_ons',
         'base_price',
         'addons_total',
+        'discount_total',
         'total_price',
         'payment_method',
         'payment_status',
@@ -80,6 +82,7 @@ class Appointment extends Model
         'longitude' => 'float',
         'base_price' => 'decimal:2',
         'addons_total' => 'decimal:2',
+        'discount_total' => 'decimal:2',
         'total_price' => 'decimal:2',
         'auto_dispatch' => 'boolean',
         'assignment_locked' => 'boolean',
@@ -88,6 +91,26 @@ class Appointment extends Model
 
     protected static function booted(): void
     {
+        // A promo code is redeemed the moment a booking carrying one exists.
+        // Done here rather than in each controller because wallet, card and
+        // plan bookings all create appointments by different routes, and a
+        // path that forgot to record the redemption would hand out an
+        // unlimited code.
+        static::created(function (Appointment $appointment): void {
+            if ($appointment->promo_code_id === null) {
+                return;
+            }
+
+            PromoCodeRedemption::create([
+                'promo_code_id' => $appointment->promo_code_id,
+                'customer_id' => $appointment->customer_id,
+                'appointment_id' => $appointment->id,
+                'amount' => (float) $appointment->discount_total,
+            ]);
+
+            PromoCode::whereKey($appointment->promo_code_id)->increment('used_count');
+        });
+
         static::saved(function (Appointment $appointment): void {
             // (1) A worker was (re)assigned — fan out the "assigned" notification
             // via the dispatch notification layer (was inline here previously).
@@ -191,6 +214,42 @@ class Appointment extends Model
         return Attribute::get(
             fn (): bool => in_array($this->status, self::ACTIVE_STATUSES, true)
         );
+    }
+
+    public function review(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(AppointmentReview::class);
+    }
+
+    /** A finished job the customer hasn't rated yet. */
+    public function canReview(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED
+            && $this->review === null;
+    }
+
+    public function promoCode(): BelongsTo
+    {
+        return $this->belongsTo(PromoCode::class);
+    }
+
+    /**
+     * Hand the code back when a booking is cancelled — the customer never got
+     * the service, so the use shouldn't count against them.
+     */
+    public function releasePromoCode(): void
+    {
+        if ($this->promo_code_id === null) {
+            return;
+        }
+
+        $deleted = PromoCodeRedemption::where('appointment_id', $this->id)->delete();
+
+        if ($deleted > 0) {
+            PromoCode::whereKey($this->promo_code_id)
+                ->where('used_count', '>', 0)
+                ->decrement('used_count');
+        }
     }
 
     public function customerPackage(): BelongsTo
