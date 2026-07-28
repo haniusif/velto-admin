@@ -54,9 +54,19 @@ class WorkerAuthController extends Controller
 
         $smsConfigured = $this->sms->isConfigured();
 
-        // Real SMS path → fixed code 1234 (test phase, matches the customer app).
-        // Offline dev (no creds) → backdoor 1111.
-        $code = $smsConfigured ? '1234' : '1111';
+        // A real code, generated per request. This was previously the fixed
+        // string '1234' whenever SMS was configured, which meant anyone who
+        // knew a phone number could sign in as that account without ever
+        // receiving a message.
+        //
+        // random_int is the cryptographic generator; rand()/mt_rand() are
+        // predictable from a handful of observed codes.
+        //
+        // The 1111 backdoor stays, but ONLY when SMS is not configured — that
+        // is local development, where no message can arrive.
+        $code = $smsConfigured
+            ? str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT)
+            : '1111';
 
         DB::table('phone_otps')->insert([
             'phone' => $phone,
@@ -72,9 +82,15 @@ class WorkerAuthController extends Controller
             if (! ($result['success'] ?? false)) {
                 Log::warning('Worker OTP SMS send failed', ['phone' => $phone, 'result' => $result]);
 
+                // Undo the row: leaving it behind would strand a code nobody
+                // received AND hold the 60s throttle against a customer who
+                // never got a message, so they could not even retry.
+                DB::table('phone_otps')->where('phone', $phone)->where('code', $code)->delete();
+
                 return response()->json([
-                    'message' => 'Could not send SMS at this time.',
+                    'message' => 'Could not send the code. Please try again.',
                     'errors' => ['phone' => ['SMS provider error.']],
+                    'code' => 'sms_send_failed',
                 ], 502);
             }
         } else {
