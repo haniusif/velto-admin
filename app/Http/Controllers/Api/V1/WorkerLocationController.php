@@ -29,15 +29,23 @@ class WorkerLocationController extends Controller
 
         $worker = $request->user();
 
-        $hasActiveJob = $worker->appointments()
-            ->whereIn('status', Appointment::ACTIVE_STATUSES)
+        // Only while a job is actually under way — not merely accepted or
+        // scheduled. The customer can only ever see a position during these
+        // two statuses, so anything stored outside them is staff location data
+        // with no purpose. The app already starts sharing at "set off"; this
+        // makes the server the thing that enforces it.
+        $isEnRoute = $worker->appointments()
+            ->whereIn('status', [
+                Appointment::STATUS_ON_THE_WAY,
+                Appointment::STATUS_ARRIVED,
+            ])
             ->exists();
 
-        if (! $hasActiveJob) {
+        if (! $isEnRoute) {
             // Not an error the app should retry — it should stop sending.
             return response()->json([
                 'data' => ['accepted' => false],
-                'message' => 'No active job; location is not being collected.',
+                'message' => 'Not en route to a job; location is not being collected.',
                 'code' => 'no_active_job',
             ], 200);
         }
