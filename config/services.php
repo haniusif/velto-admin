@@ -29,6 +29,21 @@ $arbActive = $arbEnvironments[$arbMode];
 
 return [
 
+    // Phone numbers that bypass SMS and always receive a known OTP.
+    //
+    // For App Store/Play review accounts and QA handsets, where no real
+    // message can be delivered. Scoped deliberately: this is an explicit
+    // allowlist, NOT the old behaviour where every account's code was '1234'.
+    // Anything listed here can be signed into by anyone who knows the number,
+    // so keep it to numbers you control and remove them when done.
+    'otp' => [
+        'test_phones' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('OTP_TEST_PHONES', '')),
+        ))),
+        'test_code' => (string) env('OTP_TEST_CODE', '1234'),
+    ],
+
     'google_maps' => [
         'key' => env('GOOGLE_MAPS_KEY'),
     ],

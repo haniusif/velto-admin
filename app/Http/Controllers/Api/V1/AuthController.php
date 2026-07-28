@@ -57,9 +57,15 @@ class AuthController extends Controller
         //
         // The 1111 backdoor stays, but ONLY when SMS is not configured — that
         // is local development, where no message can arrive.
-        $code = $smsConfigured
-            ? str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT)
-            : '1111';
+        // An allowlisted test number gets a known code and no SMS attempt:
+        // review accounts and QA handsets cannot receive a real message.
+        $isTestPhone = in_array($phone, (array) config('services.otp.test_phones', []), true);
+
+        $code = match (true) {
+            $isTestPhone => (string) config('services.otp.test_code', '1234'),
+            $smsConfigured => str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT),
+            default => '1111',
+        };
 
         DB::table('phone_otps')->insert([
             'phone' => $phone,
@@ -70,7 +76,7 @@ class AuthController extends Controller
             'updated_at' => now(),
         ]);
 
-        if ($smsConfigured) {
+        if ($smsConfigured && ! $isTestPhone) {
             $result = $this->sms->sendOtp($phone, $code);
             if (! ($result['success'] ?? false)) {
                 Log::warning('OTP SMS send failed', ['phone' => $phone, 'result' => $result]);
