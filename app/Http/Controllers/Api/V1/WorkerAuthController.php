@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Rules\SaudiMobile;
+use App\Support\SaudiPhone;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\WorkerResource;
 use App\Models\Worker;
@@ -19,10 +21,10 @@ class WorkerAuthController extends Controller
     public function requestOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'min:9', 'max:32'],
+            'phone' => ['required', 'string', 'max:32', new SaudiMobile],
         ]);
 
-        $phone = $this->normalizePhone($data['phone']);
+        $phone = SaudiPhone::normalize($data['phone']);
 
         // Workers are provisioned by the admin — don't leak which numbers exist,
         // but also don't bother sending SMS to a non-worker. Treat as success either way.
@@ -121,11 +123,11 @@ class WorkerAuthController extends Controller
     public function verifyOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string'],
+            'phone' => ['required', 'string', 'max:32', new SaudiMobile],
             'code' => ['required', 'string', 'size:4'],
         ]);
 
-        $phone = $this->normalizePhone($data['phone']);
+        $phone = SaudiPhone::normalize($data['phone']);
 
         $worker = Worker::where('phone', $phone)->where('status', 'active')->first();
         if (! $worker) {
@@ -180,22 +182,4 @@ class WorkerAuthController extends Controller
         return response()->json(['data' => ['ok' => true]]);
     }
 
-    private function normalizePhone(string $phone): string
-    {
-        $digits = preg_replace('/\D+/', '', $phone) ?? '';
-
-        if (str_starts_with($phone, '+')) {
-            return '+'.$digits;
-        }
-
-        if (str_starts_with($digits, '966')) {
-            return '+'.$digits;
-        }
-
-        if (str_starts_with($digits, '05')) {
-            return '+966'.substr($digits, 1);
-        }
-
-        return '+'.$digits;
-    }
 }

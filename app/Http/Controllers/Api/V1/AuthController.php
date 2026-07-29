@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Rules\SaudiMobile;
+use App\Support\SaudiPhone;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Models\Customer;
@@ -23,10 +25,10 @@ class AuthController extends Controller
     public function requestOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'min:9', 'max:32'],
+            'phone' => ['required', 'string', 'max:32', new SaudiMobile],
         ]);
 
-        $phone = $this->normalizePhone($data['phone']);
+        $phone = SaudiPhone::normalize($data['phone']);
 
         // Allowlisted numbers are resolved first so the throttle can skip
         // them: no SMS is sent, so there is nothing to rate-limit, and an App
@@ -115,11 +117,11 @@ class AuthController extends Controller
     public function verifyOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string'],
+            'phone' => ['required', 'string', 'max:32', new SaudiMobile],
             'code' => ['required', 'string', 'size:4'],
         ]);
 
-        $phone = $this->normalizePhone($data['phone']);
+        $phone = SaudiPhone::normalize($data['phone']);
 
         $otp = DB::table('phone_otps')
             ->where('phone', $phone)
@@ -257,22 +259,4 @@ class AuthController extends Controller
         );
     }
 
-    private function normalizePhone(string $phone): string
-    {
-        $digits = preg_replace('/\D+/', '', $phone) ?? '';
-
-        if (str_starts_with($phone, '+')) {
-            return '+'.$digits;
-        }
-
-        if (str_starts_with($digits, '966')) {
-            return '+'.$digits;
-        }
-
-        if (str_starts_with($digits, '05')) {
-            return '+966'.substr($digits, 1);
-        }
-
-        return '+'.$digits;
-    }
 }
