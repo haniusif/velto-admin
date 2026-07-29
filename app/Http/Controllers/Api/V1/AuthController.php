@@ -28,8 +28,15 @@ class AuthController extends Controller
 
         $phone = $this->normalizePhone($data['phone']);
 
+        // Allowlisted numbers are resolved first so the throttle can skip
+        // them: no SMS is sent, so there is nothing to rate-limit, and an App
+        // Store reviewer moving between the customer and worker apps shares
+        // one phone_otps throttle and would otherwise be locked out for a
+        // minute.
+        $isTestPhone = in_array($phone, (array) config('services.otp.test_phones', []), true);
+
         // Throttle: max 1 OTP request per phone per 60 seconds.
-        $recent = DB::table('phone_otps')
+        $recent = $isTestPhone ? null : DB::table('phone_otps')
             ->where('phone', $phone)
             ->where('created_at', '>=', now()->subSeconds(60))
             ->orderByDesc('id')
@@ -59,8 +66,6 @@ class AuthController extends Controller
         // is local development, where no message can arrive.
         // An allowlisted test number gets a known code and no SMS attempt:
         // review accounts and QA handsets cannot receive a real message.
-        $isTestPhone = in_array($phone, (array) config('services.otp.test_phones', []), true);
-
         $code = match (true) {
             $isTestPhone => (string) config('services.otp.test_code', '1234'),
             $smsConfigured => str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT),
