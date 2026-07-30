@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Rules\SaudiMobile;
+use App\Services\Account\DeleteCustomerAccount;
 use App\Support\SaudiPhone;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CustomerResource;
@@ -177,6 +178,23 @@ class AuthController extends Controller
         $request->user()?->currentAccessToken()?->delete();
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    /**
+     * DELETE /api/v1/auth/account
+     *
+     * Deletes the signed-in customer and their personal data. Required by App
+     * Store Guideline 5.1.1(v) — a deactivate-only flow is not acceptable, so
+     * this is irreversible and the app confirms before calling it.
+     */
+    public function deleteAccount(Request $request, DeleteCustomerAccount $delete): JsonResponse
+    {
+        /** @var Customer $customer */
+        $customer = $request->user();
+
+        $delete($customer);
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     /** PATCH /api/v1/auth/profile */

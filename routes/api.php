@@ -61,6 +61,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::patch('/profile', [AuthController::class, 'updateProfile']);
             Route::post('/avatar', [AuthController::class, 'updateAvatar']);
+            // Required by App Store Guideline 5.1.1(v): account deletion has to
+            // be reachable from inside the app, not only from support.
+            Route::delete('/account', [AuthController::class, 'deleteAccount']);
         });
     });
 
