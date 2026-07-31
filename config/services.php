@@ -37,8 +37,12 @@ return [
     // Anything listed here can be signed into by anyone who knows the number,
     // so keep it to numbers you control and remove them when done.
     'otp' => [
+        // Normalised so the list matches however it is written in .env —
+        // 0535097129, 535097129 and +966535097129 all reach the same entry.
+        // The comparison is against the canonical +9665XXXXXXXX form, so a bare
+        // number here would silently miss and send a real SMS instead.
         'test_phones' => array_values(array_filter(array_map(
-            'trim',
+            static fn (string $phone): ?string => \App\Support\SaudiPhone::normalize($phone),
             explode(',', (string) env('OTP_TEST_PHONES', '')),
         ))),
         'test_code' => (string) env('OTP_TEST_CODE', '1234'),
