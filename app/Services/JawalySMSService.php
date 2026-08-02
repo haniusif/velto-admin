@@ -152,4 +152,81 @@ class JawalySMSService
     {
         return filled($this->appId) && filled($this->appSecret);
     }
+
+    /**
+     * Remaining SMS credits across the account's open packages.
+     *
+     * 4jawaly bills per message from a prepaid points balance. Running out is
+     * silent from our side — sendSMS still returns HTTP 200 — so the number is
+     * worth watching before customers stop receiving codes.
+     *
+     * @return array{configured:bool, remaining:int|null, total:int|null, expires_at:string|null, error:string|null}
+     */
+    public function balance(): array
+    {
+        $empty = ['configured' => false, 'remaining' => null, 'total' => null, 'expires_at' => null, 'error' => null];
+
+        if (! $this->isConfigured()) {
+            return $empty;
+        }
+
+        $body = $this->get('account/area/me/packages');
+
+        if ($body === null) {
+            return ['configured' => true, 'remaining' => null, 'total' => null, 'expires_at' => null, 'error' => 'unreachable'];
+        }
+
+        $packages = (array) data_get($body, 'items.data', []);
+
+        // Only packages still open count toward what we can actually send.
+        $open = array_filter($packages, static fn (array $p): bool => (int) ($p['is_open'] ?? 0) === 1);
+
+        if ($open === []) {
+            return ['configured' => true, 'remaining' => 0, 'total' => 0, 'expires_at' => null, 'error' => null];
+        }
+
+        $remaining = array_sum(array_map(static fn (array $p): int => (int) ($p['current_points'] ?? 0), $open));
+        $total = array_sum(array_map(static fn (array $p): int => (int) ($p['package_points'] ?? 0), $open));
+
+        // The soonest expiry is the one that matters — credits die with it.
+        $expiries = array_filter(array_map(static fn (array $p) => $p['expire_at'] ?? null, $open));
+        sort($expiries);
+
+        return [
+            'configured' => true,
+            'remaining' => $remaining,
+            'total' => $total,
+            'expires_at' => $expiries[0] ?? null,
+            'error' => null,
+        ];
+    }
+
+    /** GET a JSON endpoint with the account credentials. Null on any failure. */
+    private function get(string $path): ?array
+    {
+        $ch = curl_init($this->baseUrl.ltrim($path, '/'));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                // 4jawaly rejects a GET without this, with a 400 that says so.
+                'Content-Type: application/json',
+                'Authorization: Basic '.base64_encode($this->appId.':'.$this->appSecret),
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_errno($ch) ? curl_error($ch) : null;
+        curl_close($ch);
+
+        if ($error !== null || $status < 200 || $status >= 300) {
+            Log::warning('Jawaly GET failed', ['path' => $path, 'status' => $status, 'error' => $error]);
+
+            return null;
+        }
+
+        return json_decode((string) $response, true);
+    }
 }
