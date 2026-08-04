@@ -9,6 +9,7 @@ class VehicleModelEntry extends Model
 {
     protected $fillable = [
         'vehicle_brand_id',
+        'vehicle_category_id',
         'name',
         'name_ar',
         'sort_order',
@@ -23,5 +24,17 @@ class VehicleModelEntry extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id');
+    }
+
+    /**
+     * Size band — Small, Medium or Large.
+     *
+     * Attached to the model rather than the customer's vehicle, so it is known
+     * as soon as a car is picked. Nullable: a newly added model is
+     * unclassified rather than silently treated as the smallest.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(VehicleCategory::class, 'vehicle_category_id');
     }
 }
