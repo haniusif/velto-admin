@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\VehicleCategories;
 
 use App\Filament\Resources\VehicleCategories\Pages\CreateVehicleCategory;
+use App\Filament\Resources\VehicleCategories\RelationManagers\ModelsRelationManager;
 use App\Filament\Resources\VehicleCategories\Pages\EditVehicleCategory;
 use App\Filament\Resources\VehicleCategories\Pages\ListVehicleCategories;
 use App\Filament\Resources\VehicleCategories\Pages\ViewVehicleCategory;
@@ -34,6 +35,11 @@ class VehicleCategoryResource extends Resource
     public static function form(Schema $schema): Schema { return VehicleCategoryForm::configure($schema); }
     public static function infolist(Schema $schema): Schema { return VehicleCategoryInfolist::configure($schema); }
     public static function table(Table $table): Table { return VehicleCategoriesTable::configure($table); }
+
+    public static function getRelations(): array
+    {
+        return [ModelsRelationManager::class];
+    }
 
     public static function getPages(): array
     {
