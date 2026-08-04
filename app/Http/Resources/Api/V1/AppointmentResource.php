@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\BookingTime;
 use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -15,7 +16,8 @@ class AppointmentResource extends JsonResource
             'id' => $this->id,
             'status' => $this->status,
             'is_upcoming' => in_array($this->status, Appointment::ACTIVE_STATUSES, true),
-            'scheduled_at' => optional($this->scheduled_at)?->toIso8601String(),
+            // A wall-clock booking time, not a UTC instant — see BookingTime.
+            'scheduled_at' => BookingTime::toIso($this->scheduled_at),
 
             'service' => [
                 'id' => $this->wash_package_id,

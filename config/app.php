@@ -69,6 +69,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Velto operates in one country, and a booking time is a wall-clock time in
+    | it: a customer choosing 21:00 means 21:00 in Riyadh. Those values are
+    | stored naively, built from the time slot's date and start_time, so they
+    | must be serialised with this offset rather than the app timezone above.
+    | Emitting them as UTC made every client shift a booking by three hours.
+    |
+    | Event timestamps — accepted_at, completed_at — are real instants recorded
+    | with now() and stay UTC.
+    |
+    */
+
+    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'Asia/Riyadh'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
