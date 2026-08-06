@@ -13,6 +13,7 @@ class VehicleCategory extends Model
         'name_ar',
         'description',
         'description_ar',
+        'price',
         'sort_order',
         'is_active',
     ];
@@ -20,6 +21,7 @@ class VehicleCategory extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'price' => 'decimal:2',
     ];
 
     /**

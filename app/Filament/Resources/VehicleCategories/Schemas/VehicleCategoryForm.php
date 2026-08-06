@@ -31,6 +31,13 @@ class VehicleCategoryForm
                     ->label(__('Description (English)'))
                     ->helperText(__('e.g. SUV, pickup, van.')),
                 TextInput::make('description_ar')->label(__('Description (Arabic)')),
+                TextInput::make('price')
+                    ->label(__('Price'))
+                    ->numeric()
+                    ->step(0.01)
+                    ->minValue(0)
+                    ->suffix('SAR')
+                    ->helperText(__('What a wash costs for this size of car. Left empty, the service’s own price is charged instead.')),
                 TextInput::make('sort_order')->label(__('Sort order'))->numeric()->default(0),
                 Toggle::make('is_active')->label(__('Active'))->default(true)->inline(false),
             ])

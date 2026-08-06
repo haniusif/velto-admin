@@ -66,10 +66,10 @@
     "Booked": "محجوز",
     "Booking": "حجز",
     "Bookings": "الحجوزات",
-    "Boolean": "منطقي (صح\/خطأ)",
+    "Boolean": "منطقي (صح/خطأ)",
     "Boundary": "الحدود",
     "Brand": "الماركة",
-    "Buffer in minutes after each slot (e.g. travel\/cleanup time).": "فاصل بالدقائق بعد كل موعد (مثل وقت التنقل أو التجهيز).",
+    "Buffer in minutes after each slot (e.g. travel/cleanup time).": "فاصل بالدقائق بعد كل موعد (مثل وقت التنقل أو التجهيز).",
     "Calendar view": "عرض التقويم",
     "Cancel order": "إلغاء الطلب",
     "Cancelled": "ملغي",
@@ -160,7 +160,7 @@
     "How many parallel bookings this slot can hold.": "عدد الحجوزات المتزامنة التي يمكن أن يستوعبها هذا الموعد.",
     "How the engine assigns, and which strategy it uses by default.": "كيف يقوم المحرك بالإسناد، والاستراتيجية الافتراضية المستخدمة.",
     "Icon": "الأيقونة",
-    "Icon path \/ URL": "مسار \/ رابط الأيقونة",
+    "Icon path / URL": "مسار / رابط الأيقونة",
     "Identity": "الهوية",
     "Idle": "خامل",
     "Image": "الصورة",
@@ -206,7 +206,7 @@
     "Name": "الاسم",
     "Name (Arabic)": "الاسم (بالعربية)",
     "Name (English)": "الاسم (بالإنجليزية)",
-    "National ID \/ Iqama": "الهوية \/ الإقامة",
+    "National ID / Iqama": "الهوية / الإقامة",
     "Nearest": "الأقرب",
     "New time slot": "موعد جديد",
     "New transaction": "معاملة جديدة",
@@ -387,5 +387,6 @@
     "Zone Based": "حسب المنطقة",
     "Zones": "المناطق",
     "{1}day|[2,*]days": "{1}يوم|[2,*]أيام",
-    "{1}slot|[2,*]slots": "{1}موعد|[2,*]مواعيد"
+    "{1}slot|[2,*]slots": "{1}موعد|[2,*]مواعيد",
+    "What a wash costs for this size of car. Left empty, the service’s own price is charged instead.": "تكلفة الغسيل لهذا الحجم من السيارات. إذا تُرك فارغًا، يُحتسب سعر الخدمة نفسه."
 }

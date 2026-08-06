@@ -17,6 +17,7 @@ class VehicleCategoryInfolist
                 TextEntry::make('name_ar')->label(__('Arabic name'))->placeholder('—'),
                 TextEntry::make('description')->label(__('Description'))->placeholder('—'),
                 TextEntry::make('description_ar')->label(__('Arabic description'))->placeholder('—'),
+                TextEntry::make('price')->label(__('Price'))->money('SAR')->placeholder('—'),
                 TextEntry::make('sort_order')->label(__('Sort order')),
                 IconEntry::make('is_active')->label(__('Active'))->boolean(),
             ])

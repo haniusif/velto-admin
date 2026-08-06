@@ -5,6 +5,7 @@ namespace App\Services\Booking;
 use App\Models\PackageAddOn;
 use App\Models\PromoCode;
 use App\Models\TimeSlot;
+use App\Models\Vehicle;
 use App\Models\WashPackage;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -45,7 +46,7 @@ class BookingFactory
             }
         }
 
-        $base = (float) $package->price;
+        $base = $this->basePriceFor($vehicle, $package);
         $addonsTotal = (float) $addOns->sum('extra_price');
         $subtotal = round($base + $addonsTotal, 2);
 
@@ -82,6 +83,23 @@ class BookingFactory
             'total' => round($subtotal - $discount, 2),
             'location' => $data['location'] ?? [],
         ];
+    }
+
+    /**
+     * What the wash itself costs, before add-ons and promos.
+     *
+     * Priced by the size of the car: a Large costs more to wash than a Small,
+     * whatever the service. The wash package's own price is the fallback, used
+     * when the car can't be placed in a band — free-typed model, unclassified
+     * model, or a band with no price set. Falling back to the package price
+     * keeps an unrecognised car bookable at the advertised rate instead of
+     * failing the booking or pricing it at zero.
+     */
+    private function basePriceFor(Vehicle $vehicle, WashPackage $package): float
+    {
+        $categoryPrice = $vehicle->sizeCategory()?->price;
+
+        return round((float) ($categoryPrice ?? $package->price), 2);
     }
 
     public function attributes(array $b, TimeSlot $slot, array $data, string $status, string $paymentMethod, string $paymentStatus): array
@@ -122,7 +140,6 @@ class BookingFactory
     }
 
     /** Lock a bookable slot row and validate it; throws on unavailable/full/past. */
-
     public function lockBookableSlot(int $slotId): TimeSlot
     {
         $slot = TimeSlot::where('is_active', true)->lockForUpdate()->find($slotId);

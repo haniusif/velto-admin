@@ -24,6 +24,8 @@ class VehicleCategoriesTable
                     ->description(fn ($record) => $record->name_ar),
                 TextColumn::make('description')->label(__('Description'))->color('gray')->toggleable()
                     ->placeholder('—'),
+                TextColumn::make('price')->label(__('Price'))->money('SAR', 0)->sortable()
+                    ->placeholder('—'),
                 IconColumn::make('is_active')->label(__('Active'))->boolean(),
             ])
             ->filters([TernaryFilter::make('is_active')->label(__('Active'))])
