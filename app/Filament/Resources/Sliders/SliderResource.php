@@ -24,11 +24,11 @@ class SliderResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'id';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Catalog');
+        return __('Marketing');
     }
 
     public static function getNavigationLabel(): string

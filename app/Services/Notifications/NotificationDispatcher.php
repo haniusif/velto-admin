@@ -106,6 +106,30 @@ class NotificationDispatcher
             ['appointment_id' => $a->id]);
     }
 
+    /**
+     * A hand-written notification from the admin, to one customer or many.
+     *
+     * Routes through the same path as every automatic notification, so a
+     * broadcast lands in the in-app inbox *and* on the device, localized per
+     * recipient. Returns how many customers were reached.
+     *
+     * @param  iterable<int>  $customerIds
+     * @param  array<string,mixed>  $data
+     */
+    public function customerAnnouncement(
+        iterable $customerIds, string $kind, string $title, string $titleAr,
+        string $body, string $bodyAr, array $data = [],
+    ): int {
+        $sent = 0;
+
+        foreach ($customerIds as $id) {
+            $this->toCustomer($id, $kind, $title, $titleAr, $body, $bodyAr, $data);
+            $sent++;
+        }
+
+        return $sent;
+    }
+
     // --- internals -------------------------------------------------------
 
     /**

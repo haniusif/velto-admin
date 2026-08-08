@@ -22,11 +22,11 @@ class PromoCodeResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'code';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 4;
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Customers');
+        return __('Marketing');
     }
 
     public static function getNavigationLabel(): string

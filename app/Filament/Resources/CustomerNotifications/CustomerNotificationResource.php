@@ -24,16 +24,16 @@ class CustomerNotificationResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 1;
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Customers');
+        return __('Marketing');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Notifications');
+        return __('Single notification');
     }
 
     public static function getModelLabel(): string

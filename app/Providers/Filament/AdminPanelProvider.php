@@ -44,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make(fn (): string => __('Operations'))->collapsible(),
                 NavigationGroup::make(fn (): string => __('Customers'))->collapsible(),
+                NavigationGroup::make(fn (): string => __('Marketing'))->collapsible(),
                 NavigationGroup::make(fn (): string => __('Catalog'))->collapsed(),
                 NavigationGroup::make(fn (): string => __('Locations'))->collapsed(),
                 NavigationGroup::make(fn (): string => __('Team & access'))->collapsed(),
