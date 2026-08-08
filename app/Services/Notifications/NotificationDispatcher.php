@@ -130,6 +130,45 @@ class NotificationDispatcher
         return $sent;
     }
 
+    /**
+     * Push an inbox row that already exists to the customer's devices, in the
+     * language they picked. Separate from toCustomer() because the admin's own
+     * create form writes the row itself — calling the full path there would
+     * leave the customer with the same message in their inbox twice.
+     *
+     * Returns false when there is nothing to push to, so a caller can say so.
+     */
+    public function pushCustomerNotification(CustomerNotification $notification): bool
+    {
+        $customer = $notification->customer;
+
+        if ($customer === null) {
+            return false;
+        }
+
+        $tokens = $customer->deviceTokens();
+
+        if ($tokens === []) {
+            return false;
+        }
+
+        // Arabic is the app default, and the Arabic copy is optional on the
+        // admin form — fall back rather than push an empty banner.
+        $useAr = ($customer->preferred_language ?? 'ar') === 'ar';
+        $title = $useAr ? ($notification->title_ar ?: $notification->title) : $notification->title;
+        $body = $useAr ? ($notification->body_ar ?: $notification->body) : $notification->body;
+
+        $this->push->send(
+            $tokens,
+            (string) $title,
+            (string) $body,
+            array_map('strval', array_merge($notification->data ?? [], ['kind' => $notification->kind])),
+            PushSender::AUDIENCE_CUSTOMER,
+        );
+
+        return true;
+    }
+
     // --- internals -------------------------------------------------------
 
     /**
@@ -145,7 +184,7 @@ class NotificationDispatcher
             return;
         }
 
-        CustomerNotification::create([
+        $notification = CustomerNotification::create([
             'customer_id' => $customerId,
             'kind' => $kind,
             'title' => $title,
@@ -155,17 +194,7 @@ class NotificationDispatcher
             'data' => $data,
         ]);
 
-        $customer = Customer::find($customerId);
-        if ($customer !== null) {
-            $useAr = ($customer->preferred_language ?? 'ar') === 'ar';
-            $this->push->send(
-                $customer->deviceTokens(),
-                $useAr ? $titleAr : $title,
-                $useAr ? $bodyAr : $body,
-                array_map('strval', array_merge($data, ['kind' => $kind])),
-                PushSender::AUDIENCE_CUSTOMER,
-            );
-        }
+        $this->pushCustomerNotification($notification);
     }
 
     private function toWorker(
