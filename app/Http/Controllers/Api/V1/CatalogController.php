@@ -103,6 +103,45 @@ class CatalogController extends Controller
         ]);
     }
 
+    /**
+     * Version floors for the mobile apps, so a release can be made mandatory
+     * from the admin without shipping another build.
+     *
+     * The client decides what to do; this only reports the numbers. An unknown
+     * or missing platform returns nulls rather than a 4xx — the app treats a
+     * failed check as "do not block", and a hard error here would be the one
+     * thing capable of locking every customer out.
+     */
+    public function appVersion(Request $request): JsonResponse
+    {
+        $platform = strtolower((string) $request->query('platform', ''));
+
+        if (! in_array($platform, ['ios', 'android'], true)) {
+            return response()->json(['data' => [
+                'platform' => $platform ?: null,
+                'latest_version' => null,
+                'minimum_version' => null,
+                'latest_build' => null,
+                'minimum_build' => null,
+                'store_url' => null,
+            ]]);
+        }
+
+        $settings = AppSetting::group('app_version');
+        $value = static fn (string $name): ?string => $settings["app_version.{$platform}.{$name}"] ?? null;
+
+        return response()->json(['data' => [
+            'platform' => $platform,
+            'latest_version' => $value('latest_version'),
+            'minimum_version' => $value('minimum_version'),
+            // Build numbers are integers to the client; keep null distinct
+            // from 0, which would force an update against every build.
+            'latest_build' => is_numeric($value('latest_build')) ? (int) $value('latest_build') : null,
+            'minimum_build' => is_numeric($value('minimum_build')) ? (int) $value('minimum_build') : null,
+            'store_url' => $value('store_url'),
+        ]]);
+    }
+
     /** GET /api/v1/catalog/wash-packages */
     public function washPackages(): JsonResponse
     {

@@ -37,6 +37,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/faqs', [CatalogController::class, 'faqs']);
         Route::get('/legal/{slug}', [CatalogController::class, 'legal']);
         Route::get('/support', [CatalogController::class, 'support']);
+        // Version floors for the mobile apps (force / optional update).
+        Route::get('/app-version', [CatalogController::class, 'appVersion']);
         Route::get('/wash-packages', [CatalogController::class, 'washPackages']);
         Route::get('/coverage', [CatalogController::class, 'coverage']);
         Route::get('/coverage/zones', [CatalogController::class, 'coverageZones']);
