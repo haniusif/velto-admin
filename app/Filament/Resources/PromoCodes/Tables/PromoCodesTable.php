@@ -5,6 +5,7 @@ namespace App\Filament\Resources\PromoCodes\Tables;
 use App\Models\PromoCode;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -58,7 +59,7 @@ class PromoCodesTable
                         ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
                         ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))),
             ])
-            ->recordActions([EditAction::make()])
+            ->recordActions([EditAction::make(), DeleteAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])])
             ->defaultSort('created_at', 'desc');
     }

@@ -9,6 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Unique;
 
 class PromoCodeForm
 {
@@ -26,7 +27,13 @@ class PromoCodeForm
                             // Stored uppercase so lookups are predictable and
                             // customers never lose to their keyboard case.
                             ->dehydrateStateUsing(fn (?string $s) => mb_strtoupper(trim((string) $s)))
-                            ->unique(ignoreRecord: true),
+                            // PromoCode::findByCode matches on UPPER(code), so uniqueness has
+                            // to be checked the same way. Left to the default, "save10" saves
+                            // alongside "SAVE10" on any case-sensitive collation, and one of
+                            // the two becomes unreachable.
+                            ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, $state) => $rule
+                                ->where(fn ($query) => $query
+                                    ->whereRaw('UPPER(code) = ?', [mb_strtoupper(trim((string) $state))]))),
 
                         Toggle::make('is_active')->label(__('Active'))->default(true)->inline(false),
 
@@ -52,6 +59,10 @@ class PromoCodeForm
                             ->label(__('Value'))
                             ->numeric()
                             ->required()
+                            ->minValue(0.01)
+                            // Nothing stopped a 500% code before this; the discount is applied
+                            // to the total, so that pays the customer to book.
+                            ->maxValue(fn ($get) => $get('type') === PromoCode::TYPE_PERCENT ? 100 : null)
                             ->suffix(fn ($get) => $get('type') === PromoCode::TYPE_PERCENT ? '%' : 'SAR'),
 
                         TextInput::make('max_discount')
@@ -92,7 +103,13 @@ class PromoCodeForm
                             ->dehydrated(false),
 
                         DateTimePicker::make('starts_at')->label(__('Starts'))->seconds(false),
-                        DateTimePicker::make('expires_at')->label(__('Expires'))->seconds(false),
+                        DateTimePicker::make('expires_at')
+                            ->label(__('Expires'))
+                            ->seconds(false)
+                            // withinWindow() requires starts_at past AND expires_at future;
+                            // reversed dates make a code that is never redeemable and gives
+                            // no clue why.
+                            ->after('starts_at'),
                     ]),
             ]);
     }
