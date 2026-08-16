@@ -34,6 +34,9 @@ class AppointmentsTable
     public static function configure(Table $table): Table
     {
         return $table
+            // Operators keep this list open while bookings arrive; without a
+            // poll a new order only appeared after a manual reload.
+            ->poll('30s')
             ->columns([
                 TextColumn::make('id')
                     ->label('#')

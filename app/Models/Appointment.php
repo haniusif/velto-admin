@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\BookingTime;
+
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -266,9 +268,11 @@ class Appointment extends Model
     /** Can be cancelled/rescheduled only while still active and in the future. */
     public function isActionable(): bool
     {
+        $at = $this->scheduledInstant();
+
         return in_array($this->status, self::ACTIVE_STATUSES, true)
-            && $this->scheduled_at !== null
-            && $this->scheduled_at->isFuture();
+            && $at !== null
+            && $at->isFuture();
     }
 
     /**
@@ -279,9 +283,29 @@ class Appointment extends Model
      */
     public function canCancel(): bool
     {
+        $at = $this->scheduledInstant();
+
         return in_array($this->status, self::ACTIVE_STATUSES, true)
-            && $this->scheduled_at !== null
-            && $this->scheduled_at->isAfter(now()->addHours(self::CANCELLATION_CUTOFF_HOURS));
+            && $at !== null
+            && $at->isAfter(now()->addHours(self::CANCELLATION_CUTOFF_HOURS));
+    }
+
+    /**
+     * scheduled_at as a real instant.
+     *
+     * The column holds Riyadh wall-clock digits stored naively, and the app
+     * timezone is UTC, so comparing it to now() directly placed every booking
+     * three hours later than it is. The cancellation window and the reschedule
+     * guard therefore disagreed with the time the customer was looking at.
+     */
+    public function scheduledInstant(): ?\Carbon\CarbonInterface
+    {
+        return $this->scheduled_at === null
+            ? null
+            : BookingTime::slotInstant(
+                $this->scheduled_at->toDateString(),
+                $this->scheduled_at->format('H:i:s'),
+            );
     }
 
     /**

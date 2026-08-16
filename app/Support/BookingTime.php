@@ -23,6 +23,23 @@ use Illuminate\Support\Carbon;
  */
 final class BookingTime
 {
+    /**
+     * The real instant a time slot's wall-clock date + start_time refers to.
+     *
+     * Use this for comparisons ONLY — never for the value written to
+     * scheduled_at, which is stored naively by design (see the class comment).
+     *
+     * Carbon::parse() with no timezone reads those digits as UTC, so a 18:00
+     * Riyadh slot was compared as 18:00 UTC — three hours later than it really
+     * is. Every slot therefore stayed "in the future" for three hours after it
+     * had passed: it kept appearing in the picker, and the booking and
+     * reschedule endpoints both accepted it.
+     */
+    public static function slotInstant(string $date, string $startTime): CarbonInterface
+    {
+        return Carbon::parse("{$date} {$startTime}", config('app.business_timezone'));
+    }
+
     public static function toIso(?CarbonInterface $wallClock): ?string
     {
         if ($wallClock === null) {

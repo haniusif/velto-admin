@@ -150,8 +150,10 @@ class BookingFactory
             ]);
         }
 
-        $scheduledAt = Carbon::parse($slot->date->toDateString().' '.$slot->start_time);
-        if ($scheduledAt->isPast()) {
+        // scheduled_at itself stays naive wall-clock; only the check is
+        // timezone-aware, or a slot that passed up to three hours ago is
+        // still accepted.
+        if (BookingTime::slotInstant($slot->date->toDateString(), $slot->start_time)->isPast()) {
             throw ValidationException::withMessages([
                 'time_slot_id' => ['This time slot is in the past.'],
             ]);

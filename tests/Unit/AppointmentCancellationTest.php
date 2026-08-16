@@ -8,9 +8,20 @@ use Tests\TestCase;
 /**
  * The cancellation cutoff: a customer may only cancel while the booking is
  * still more than Appointment::CANCELLATION_CUTOFF_HOURS away.
+ *
+ * scheduled_at holds Riyadh wall-clock digits stored naively (see
+ * App\Support\BookingTime), so these fixtures build times in that zone. Using
+ * now() directly would write UTC digits, which is what previously made the
+ * window open three hours later than the customer's own clock.
  */
 class AppointmentCancellationTest extends TestCase
 {
+    /** "now" as the customer reads it — the zone the stored digits mean. */
+    private function riyadhNow(): \Carbon\CarbonImmutable
+    {
+        return \Carbon\CarbonImmutable::now(config('app.business_timezone'));
+    }
+
     private function booking(string $status, ?\DateTimeInterface $at): Appointment
     {
         $a = new Appointment;
@@ -22,7 +33,7 @@ class AppointmentCancellationTest extends TestCase
 
     public function test_can_cancel_well_before_the_cutoff(): void
     {
-        $a = $this->booking(Appointment::STATUS_CONFIRMED, now()->addDay());
+        $a = $this->booking(Appointment::STATUS_CONFIRMED, $this->riyadhNow()->addDay());
 
         $this->assertTrue($a->canCancel());
     }
@@ -31,7 +42,7 @@ class AppointmentCancellationTest extends TestCase
     {
         $a = $this->booking(
             Appointment::STATUS_CONFIRMED,
-            now()->addHours(Appointment::CANCELLATION_CUTOFF_HOURS)->subMinute(),
+            $this->riyadhNow()->addHours(Appointment::CANCELLATION_CUTOFF_HOURS)->subMinute(),
         );
 
         $this->assertFalse($a->canCancel());
@@ -41,7 +52,7 @@ class AppointmentCancellationTest extends TestCase
     {
         $a = $this->booking(
             Appointment::STATUS_CONFIRMED,
-            now()->addHours(Appointment::CANCELLATION_CUTOFF_HOURS)->addMinute(),
+            $this->riyadhNow()->addHours(Appointment::CANCELLATION_CUTOFF_HOURS)->addMinute(),
         );
 
         $this->assertTrue($a->canCancel());
@@ -49,7 +60,7 @@ class AppointmentCancellationTest extends TestCase
 
     public function test_cannot_cancel_a_booking_in_the_past(): void
     {
-        $a = $this->booking(Appointment::STATUS_CONFIRMED, now()->subHour());
+        $a = $this->booking(Appointment::STATUS_CONFIRMED, $this->riyadhNow()->subHour());
 
         $this->assertFalse($a->canCancel());
     }
@@ -81,7 +92,7 @@ class AppointmentCancellationTest extends TestCase
      */
     public function test_reschedule_window_is_unaffected_by_the_cancel_cutoff(): void
     {
-        $a = $this->booking(Appointment::STATUS_CONFIRMED, now()->addHour());
+        $a = $this->booking(Appointment::STATUS_CONFIRMED, $this->riyadhNow()->addHour());
 
         $this->assertTrue($a->isActionable());
         $this->assertFalse($a->canCancel());

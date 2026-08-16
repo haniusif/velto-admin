@@ -378,9 +378,10 @@ class AppointmentController extends Controller
                 ]);
             }
 
+            // Stored naive, compared in the business timezone — see BookingTime.
             $scheduledAt = Carbon::parse($newSlot->date->toDateString().' '.$newSlot->start_time);
 
-            if ($scheduledAt->isPast()) {
+            if (BookingTime::slotInstant($newSlot->date->toDateString(), $newSlot->start_time)->isPast()) {
                 throw ValidationException::withMessages([
                     'time_slot_id' => ['This time slot is in the past.'],
                 ]);

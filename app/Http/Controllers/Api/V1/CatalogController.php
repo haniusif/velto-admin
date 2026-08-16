@@ -21,6 +21,7 @@ use App\Models\VehicleBrand;
 use App\Models\VehicleColor;
 use App\Models\WashPackage;
 use App\Models\Zone;
+use App\Support\BookingTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -181,12 +182,14 @@ class CatalogController extends Controller
             ->orderBy('date')
             ->orderBy('start_time')
             ->get()
-            // Drop slots whose start time has already passed today.
-            ->filter(function (TimeSlot $slot): bool {
-                $start = CarbonImmutable::parse($slot->date->toDateString().' '.$slot->start_time);
-
-                return $start->isFuture();
-            })
+            // Drop slots whose start time has already passed today. Compared
+            // in the business timezone: the stored digits are Riyadh
+            // wall-clock, and reading them as UTC kept every slot on offer for
+            // three hours after it had gone.
+            ->filter(fn (TimeSlot $slot): bool => BookingTime::slotInstant(
+                $slot->date->toDateString(),
+                $slot->start_time,
+            )->isFuture())
             ->values();
 
         return response()->json([
