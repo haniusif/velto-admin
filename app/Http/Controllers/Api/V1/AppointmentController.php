@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
+use App\Support\BookingTime;
 use App\Models\AppointmentReview;
 use App\Models\CustomerPackage;
 use App\Models\WorkerLocation;

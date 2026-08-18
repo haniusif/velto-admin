@@ -3,6 +3,7 @@
 namespace App\Services\Booking;
 
 use App\Models\PackageAddOn;
+use App\Support\BookingTime;
 use App\Models\PromoCode;
 use App\Models\TimeSlot;
 use App\Models\Vehicle;

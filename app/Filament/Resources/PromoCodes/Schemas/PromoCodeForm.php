@@ -26,7 +26,12 @@ class PromoCodeForm
                             ->maxLength(40)
                             // Stored uppercase so lookups are predictable and
                             // customers never lose to their keyboard case.
-                            ->dehydrateStateUsing(fn (?string $s) => mb_strtoupper(trim((string) $s)))
+                            //
+                            // The parameter MUST be named $state: Filament injects
+                            // closure arguments by name, so a differently-named
+                            // parameter receives null and every code was saved as an
+                            // empty string.
+                            ->dehydrateStateUsing(fn (?string $state) => mb_strtoupper(trim((string) $state)))
                             // PromoCode::findByCode matches on UPPER(code), so uniqueness has
                             // to be checked the same way. Left to the default, "save10" saves
                             // alongside "SAVE10" on any case-sensitive collation, and one of

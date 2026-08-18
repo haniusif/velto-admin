@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\PromoCodes\Pages\CreatePromoCode;
 use App\Filament\Resources\PromoCodes\PromoCodeResource;
 use App\Models\PromoCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Filament\Facades\Filament;
+use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -30,6 +33,7 @@ class PromoCodeCrudTest extends TestCase
         $user->assignRole(Role::create(['name' => 'super_admin', 'guard_name' => 'web']));
 
         $this->actingAs($user);
+        Filament::setCurrentPanel('admin');
     }
 
     private function promoCode(array $overrides = []): PromoCode
@@ -109,5 +113,49 @@ class PromoCodeCrudTest extends TestCase
         $this->assertFalse($expired->withinWindow());
         $this->assertFalse($future->withinWindow());
         $this->assertTrue($live->withinWindow());
+    }
+
+    public function test_creating_a_code_through_the_form_actually_saves_it(): void
+    {
+        // The earlier tests only proved the pages loaded. They did not submit
+        // anything, so nobody noticed that every code saved as an empty string
+        // — Filament injects closure arguments by NAME, and the dehydrate
+        // closure named its parameter $s, which received null.
+        Livewire::test(CreatePromoCode::class)
+            ->fillForm([
+                'code' => 'save10',
+                'type' => PromoCode::TYPE_PERCENT,
+                'value' => 15,
+                'min_order_total' => 0,
+                'per_customer_limit' => 1,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $saved = PromoCode::first();
+
+        $this->assertNotNull($saved);
+        $this->assertSame('SAVE10', $saved->code, 'the code must be stored, and uppercased');
+    }
+
+    public function test_a_saved_code_can_actually_be_redeemed(): void
+    {
+        // An empty code is not merely untidy: findByCode() returns null for it,
+        // so the promo could never be applied to a booking.
+        Livewire::test(CreatePromoCode::class)
+            ->fillForm([
+                'code' => 'welcome20',
+                'type' => PromoCode::TYPE_PERCENT,
+                'value' => 20,
+                'min_order_total' => 0,
+                'per_customer_limit' => 1,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertNotNull(PromoCode::findByCode('WELCOME20'));
+        $this->assertNotNull(PromoCode::findByCode('welcome20'));
     }
 }
