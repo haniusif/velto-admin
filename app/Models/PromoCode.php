@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BookingTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -54,9 +55,13 @@ class PromoCode extends Model
 
     public function withinWindow(): bool
     {
+        // The window is typed in the admin as Riyadh wall clock but stored
+        // naively, so comparing the UTC-cast value against now() ran every
+        // code three hours late at both ends: it went live three hours after
+        // its start and stayed redeemable three hours past its expiry.
         return $this->is_active
-            && ($this->starts_at === null || $this->starts_at->isPast())
-            && ($this->expires_at === null || $this->expires_at->isFuture());
+            && ($this->starts_at === null || BookingTime::instant($this->starts_at)->isPast())
+            && ($this->expires_at === null || BookingTime::instant($this->expires_at)->isFuture());
     }
 
     /**

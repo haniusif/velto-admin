@@ -3,9 +3,10 @@
 namespace App\Filament\Resources\PromoCodes\Tables;
 
 use App\Models\PromoCode;
+use App\Support\BookingTime;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -55,8 +56,10 @@ class PromoCodesTable
                     ->label(__('Redeemable now'))
                     ->query(fn ($query) => $query
                         ->where('is_active', true)
-                        ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-                        ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                        // Naive Riyadh wall-clock columns, so meet them there
+                        // rather than binding a UTC now() three hours off.
+                        ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', BookingTime::nowWallClock()))
+                        ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', BookingTime::nowWallClock()))
                         ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))),
             ])
             ->recordActions([EditAction::make(), DeleteAction::make()])

@@ -67,7 +67,16 @@ final class BookingTime
         return $wallClock->format('Y-m-d g:i').' '.$period;
     }
 
-    public static function toIso(?CarbonInterface $wallClock): ?string
+    /**
+     * The real instant a stored wall-clock value refers to.
+     *
+     * The digits were written meaning Riyadh but are stored naively, so the
+     * UTC-cast Carbon that comes back out is three hours later than intended.
+     * Anything comparing such a column against now() must go through here
+     * first — a promo set to expire at 22:39 otherwise stayed live until
+     * 01:39 the next morning.
+     */
+    public static function instant(?CarbonInterface $wallClock): ?CarbonInterface
     {
         if ($wallClock === null) {
             return null;
@@ -76,7 +85,24 @@ final class BookingTime
         // Take the calendar digits as-is and label them with the business
         // offset. shiftTimezone() moves the label without moving the clock;
         // setTimezone() would convert the instant and change the digits.
-        return Carbon::parse($wallClock->format('Y-m-d H:i:s'), config('app.business_timezone'))
-            ->toIso8601String();
+        return Carbon::parse($wallClock->format('Y-m-d H:i:s'), config('app.business_timezone'));
+    }
+
+    /**
+     * Now, written as business wall clock — the value to compare a naive
+     * wall-clock COLUMN against in SQL.
+     *
+     * The database cannot reinterpret a column's timezone, so the comparison
+     * has to meet it where it is: bind the current moment as Riyadh digits
+     * rather than UTC ones.
+     */
+    public static function nowWallClock(): CarbonInterface
+    {
+        return Carbon::now(config('app.business_timezone'));
+    }
+
+    public static function toIso(?CarbonInterface $wallClock): ?string
+    {
+        return self::instant($wallClock)?->toIso8601String();
     }
 }
