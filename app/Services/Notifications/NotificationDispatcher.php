@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\CustomerNotification;
 use App\Models\Worker;
 use App\Models\WorkerNotification;
+use App\Support\BookingTime;
 
 /**
  * One place that turns a dispatch event into notifications, fanning each out to
@@ -22,12 +23,13 @@ class NotificationDispatcher
     /** Worker (re)assigned to a job — the notification the old model hook sent. */
     public function workerAssigned(Appointment $a): void
     {
-        $when = $a->scheduled_at?->format('Y-m-d H:i');
+        $when = BookingTime::wallClockLabel($a->scheduled_at, arabic: false);
+        $whenAr = BookingTime::wallClockLabel($a->scheduled_at, arabic: true);
         $serviceAr = $a->service_name_ar ?: $a->service_name;
 
         $this->toWorker($a->worker_id, WorkerNotification::KIND_ASSIGNED,
             'New job assigned', 'تم إسناد مهمة جديدة',
-            trim("{$a->service_name} — {$when}"), trim("{$serviceAr} — {$when}"),
+            trim("{$a->service_name} — {$when}"), trim("{$serviceAr} — {$whenAr}"),
             ['appointment_id' => $a->id]);
     }
 
@@ -35,12 +37,13 @@ class NotificationDispatcher
     public function workerOffered(AssignmentOffer $offer): void
     {
         $a = $offer->appointment;
-        $when = $a?->scheduled_at?->format('Y-m-d H:i');
+        $when = BookingTime::wallClockLabel($a?->scheduled_at, arabic: false);
+        $whenAr = BookingTime::wallClockLabel($a?->scheduled_at, arabic: true);
         $serviceAr = $a?->service_name_ar ?: $a?->service_name;
 
         $this->toWorker($offer->worker_id, WorkerNotification::KIND_OFFERED,
             'New job offer', 'عرض مهمة جديدة',
-            trim("{$a?->service_name} — {$when}"), trim("{$serviceAr} — {$when}"),
+            trim("{$a?->service_name} — {$when}"), trim("{$serviceAr} — {$whenAr}"),
             [
                 'appointment_id' => $a?->id,
                 'offer_id' => $offer->id,
@@ -55,12 +58,13 @@ class NotificationDispatcher
      */
     public function workerJobCancelled(Appointment $a, ?int $workerId = null): void
     {
-        $when = $a->scheduled_at?->format('Y-m-d H:i');
+        $when = BookingTime::wallClockLabel($a->scheduled_at, arabic: false);
+        $whenAr = BookingTime::wallClockLabel($a->scheduled_at, arabic: true);
         $serviceAr = $a->service_name_ar ?: $a->service_name;
 
         $this->toWorker($workerId ?? $a->worker_id, WorkerNotification::KIND_CANCELLED,
             'Job cancelled', 'تم إلغاء المهمة',
-            trim("{$a->service_name} — {$when}"), trim("{$serviceAr} — {$when}"),
+            trim("{$a->service_name} — {$when}"), trim("{$serviceAr} — {$whenAr}"),
             ['appointment_id' => $a->id]);
     }
 
@@ -89,11 +93,15 @@ class NotificationDispatcher
     /** Booking confirmed — after checkout or a successful payment capture. */
     public function customerBooked(Appointment $a): void
     {
-        $when = $a->scheduled_at?->format('Y-m-d H:i');
+        $when = BookingTime::wallClockLabel($a->scheduled_at, arabic: false);
+        $whenAr = BookingTime::wallClockLabel($a->scheduled_at, arabic: true);
+        // The Arabic body was built from the English service name, so an
+        // Arabic customer's "booking confirmed" arrived half in English.
+        $serviceAr = $a->service_name_ar ?: $a->service_name;
 
         $this->toCustomer($a->customer_id, CustomerNotification::KIND_BOOKING,
             'Booking confirmed', 'تم تأكيد الحجز',
-            "{$a->service_name} on {$when}", "{$a->service_name} بتاريخ {$when}",
+            "{$a->service_name} on {$when}", "{$serviceAr} بتاريخ {$whenAr}",
             ['appointment_id' => $a->id]);
     }
 

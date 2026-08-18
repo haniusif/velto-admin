@@ -40,6 +40,33 @@ final class BookingTime
         return Carbon::parse("{$date} {$startTime}", config('app.business_timezone'));
     }
 
+    /**
+     * A wall-clock time written the way a customer reads it: "2026-08-15 12:17 AM",
+     * or "2026-08-15 12:17 ص" in Arabic.
+     *
+     * Notification bodies are composed once and stored, so the recipient's
+     * language has to be decided here rather than in the app. Both apps show
+     * a 12-hour clock; a body reading "00:17" beside a card reading "12:17 ص"
+     * is the same booking twice in two dialects.
+     *
+     * Formats the stored digits and never converts: these are already Riyadh
+     * wall clock (see the class comment), so a timezone shift here would move
+     * every notification three hours.
+     */
+    public static function wallClockLabel(?CarbonInterface $wallClock, bool $arabic): ?string
+    {
+        if ($wallClock === null) {
+            return null;
+        }
+
+        $period = (int) $wallClock->format('G') < 12
+            ? ($arabic ? 'ص' : 'AM')
+            : ($arabic ? 'م' : 'PM');
+
+        // 'g' drops the leading zero on the hour, 'i' keeps it on the minutes.
+        return $wallClock->format('Y-m-d g:i').' '.$period;
+    }
+
     public static function toIso(?CarbonInterface $wallClock): ?string
     {
         if ($wallClock === null) {
