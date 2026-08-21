@@ -6,6 +6,11 @@ use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
 use App\Filament\Resources\Customers\Pages\ViewCustomer;
+use App\Filament\Resources\Customers\RelationManagers\AppointmentsRelationManager;
+use App\Filament\Resources\Customers\RelationManagers\CustomerNotificationsRelationManager;
+use App\Filament\Resources\Customers\RelationManagers\PackagesRelationManager;
+use App\Filament\Resources\Customers\RelationManagers\VehiclesRelationManager;
+use App\Filament\Resources\Customers\RelationManagers\WalletTransactionsRelationManager;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Customers\Schemas\CustomerInfolist;
 use App\Filament\Resources\Customers\Tables\CustomersTable;
@@ -64,9 +69,11 @@ class CustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            \App\Filament\Resources\Customers\RelationManagers\VehiclesRelationManager::class,
-            \App\Filament\Resources\Customers\RelationManagers\WalletTransactionsRelationManager::class,
-            \App\Filament\Resources\Customers\RelationManagers\CustomerNotificationsRelationManager::class,
+            AppointmentsRelationManager::class,
+            PackagesRelationManager::class,
+            VehiclesRelationManager::class,
+            WalletTransactionsRelationManager::class,
+            CustomerNotificationsRelationManager::class,
         ];
     }
 
