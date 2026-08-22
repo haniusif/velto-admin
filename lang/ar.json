@@ -501,5 +501,11 @@
     "Cars": "السيارات",
     "Car": "السيارة",
     "Any car": "أي سيارة",
-    "Unassigned": "غير مُسند"
+    "Unassigned": "غير مُسند",
+    "Location": "الموقع",
+    "Booking location": "موقع الحجز",
+    "Open in Google Maps": "فتح في خرائط جوجل",
+    "Directions": "الاتجاهات",
+    "Copied": "تم النسخ",
+    "No location recorded for this booking": "لا يوجد موقع مسجّل لهذا الحجز"
 }
