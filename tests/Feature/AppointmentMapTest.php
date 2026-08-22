@@ -40,6 +40,10 @@ class AppointmentMapTest extends TestCase
 
         $this->actingAs($user);
         Filament::setCurrentPanel('admin');
+
+        // The test environment carries no real key; the map only renders when
+        // one is configured, so set a stand-in rather than assert on absence.
+        config(['services.google_maps.key' => 'test-maps-key']);
     }
 
     private function booking(?float $lat, ?float $lng, ?string $address = 'حي الملقا'): Appointment
@@ -84,10 +88,9 @@ class AppointmentMapTest extends TestCase
 
         $this->openPage($booking)
             ->assertOk()
-            // The map's own coordinates arrive over Livewire rather than in
-            // the markup, so assert on the container the visible() rule gates.
-            ->assertSee('x-ref="map"', escape: false)
-            ->assertSee('mapPicker(', escape: false);
+            ->assertSee('maps.googleapis.com/maps/api/staticmap', escape: false)
+            ->assertSee('center=24.8112%2C46.6103', escape: false)
+            ->assertSee('markers=color%3A0x8863E5%7C24.8112%2C46.6103', escape: false);
     }
 
     public function test_the_map_offers_a_way_to_actually_drive_there(): void
@@ -111,7 +114,7 @@ class AppointmentMapTest extends TestCase
         $this->openPage($booking)
             ->assertOk()
             ->assertSee(__('No location recorded for this booking'))
-            ->assertDontSee('x-ref="map"', escape: false)
+            ->assertDontSee('staticmap', escape: false)
             ->assertDontSee('maps/dir/?api=1', escape: false);
     }
 
@@ -131,8 +134,22 @@ class AppointmentMapTest extends TestCase
         $this->openPage($booking)
             ->assertOk()
             ->assertSee(__('No location recorded for this booking'))
-            ->assertDontSee('x-ref="map"', escape: false)
+            ->assertDontSee('staticmap', escape: false)
             ->assertDontSee('maps/dir/?api=1', escape: false);
+    }
+
+    public function test_without_a_key_it_says_so_instead_of_a_broken_image(): void
+    {
+        // An <img> pointing at an unauthorised URL renders as a torn-image
+        // icon, which reads as a bug rather than as missing configuration.
+        config(['services.google_maps.key' => null]);
+
+        $this->openPage($this->booking(24.8112, 46.6103))
+            ->assertOk()
+            ->assertSee(__('Map unavailable — no Google Maps key configured'))
+            ->assertDontSee('staticmap', escape: false)
+            // The links still work without a key — they need no API at all.
+            ->assertSee('google.com/maps/dir/?api=1&amp;destination=24.8112,46.6103', escape: false);
     }
 
     public function test_a_latitude_without_a_longitude_is_not_half_a_map(): void
@@ -142,7 +159,7 @@ class AppointmentMapTest extends TestCase
         $this->openPage($booking)
             ->assertOk()
             ->assertSee(__('No location recorded for this booking'))
-            ->assertDontSee('x-ref="map"', escape: false)
+            ->assertDontSee('staticmap', escape: false)
             ->assertDontSee('maps/dir/?api=1', escape: false);
     }
 }

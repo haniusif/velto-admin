@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Appointments\Schemas;
 
-use Dotswan\MapPicker\Infolists\MapEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Schema;
@@ -44,23 +43,9 @@ class AppointmentInfolist
                     ->numeric()
                     ->placeholder('-'),
                 // The coordinates above answer "where is this?" only once you
-                // have pasted them somewhere else. Drawn with the same
-                // MapEntry the areas, zones and cities screens use, so the
-                // panel has one kind of map rather than two.
-                MapEntry::make('location')
+                // have pasted them somewhere else.
+                ViewEntry::make('map')
                     ->label(__('Location'))
-                    ->columnSpanFull()
-                    ->extraStyles(['min-height: 360px', 'border-radius: 16px'])
-                    ->defaultLocation(24.7136, 46.6753)
-                    ->zoom(15)
-                    ->showMarker(true)
-                    ->markerColor('#8863E5')
-                    ->getStateUsing(fn ($record) => self::point($record))
-                    // A booking with no pin would otherwise render as central
-                    // Riyadh with no marker, which reads as a real location.
-                    ->visible(fn ($record) => self::point($record) !== null),
-                ViewEntry::make('map_actions')
-                    ->label('')
                     ->view('filament.infolists.appointment-map')
                     ->columnSpanFull(),
                 TextEntry::make('area.name')
@@ -112,23 +97,5 @@ class AppointmentInfolist
                     ->dateTime()
                     ->placeholder('-'),
             ]);
-    }
-
-    /**
-     * The booking's pin, or null when there isn't one.
-     *
-     * 0,0 counts as absent: it is a real coordinate in the Gulf of Guinea, so
-     * a marker there would look like an answer rather than missing data.
-     */
-    private static function point($record): ?array
-    {
-        $lat = is_numeric($record?->latitude) ? (float) $record->latitude : null;
-        $lng = is_numeric($record?->longitude) ? (float) $record->longitude : null;
-
-        if ($lat === null || $lng === null || ($lat === 0.0 && $lng === 0.0)) {
-            return null;
-        }
-
-        return ['lat' => $lat, 'lng' => $lng];
     }
 }
