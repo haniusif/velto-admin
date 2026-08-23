@@ -9,27 +9,29 @@
     $hasPoint = $lat !== null && $lng !== null && ($lat !== 0.0 || $lng !== 0.0);
 
     $key = config('services.google_maps.key');
+    $locale = app()->getLocale();
 
     if ($hasPoint) {
-        $point = $lat . ',' . $lng;
-        $coords = $lat . ', ' . $lng;
-        $googleUrl = 'https://www.google.com/maps/search/?api=1&query=' . $point;
-        $directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' . $point;
+        $point = $lat.','.$lng;
+        $coords = $lat.', '.$lng;
+        $googleUrl = 'https://www.google.com/maps/search/?api=1&query='.$point;
+        $directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination='.$point;
 
-        // Static Maps rather than an embedded interactive map: it is the
-        // Google API this key is actually authorised for, and an image cannot
-        // fail to a grey box with an error only visible in the console.
-        // Clicking it opens the real thing.
+        // Drawn underneath the live map and revealed whenever the JavaScript
+        // API does not come up — a wrong key, an unbilled project or a blocked
+        // script otherwise leaves a grey rectangle whose only explanation is
+        // in the browser console. Static Maps is separately authorised on this
+        // key, so the picture survives the interactive map failing.
         $staticMap = filled($key)
-            ? 'https://maps.googleapis.com/maps/api/staticmap?' . http_build_query([
+            ? 'https://maps.googleapis.com/maps/api/staticmap?'.http_build_query([
                 'center' => $point,
                 'zoom' => 16,
                 'size' => '640x320',
                 'scale' => 2,
                 'maptype' => 'roadmap',
-                'language' => app()->getLocale(),
+                'language' => $locale,
                 'region' => 'SA',
-                'markers' => 'color:0x8863E5|' . $point,
+                'markers' => 'color:0x8863E5|'.$point,
                 'key' => $key,
             ])
             : null;
@@ -39,7 +41,56 @@
 @if ($hasPoint)
     <div
         x-data="{
+            live: false,
             copied: false,
+
+            boot() {
+                const key = @js($key);
+                if (! key) return;
+
+                // Google calls this globally when the key is rejected, which
+                // can happen after the map object was already built.
+                window.gm_authFailure = () => { this.live = false };
+
+                if (window.google?.maps) { this.draw(); return }
+
+                window.veltoMapsLoader ??= new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    // Built with URLSearchParams so the source carries no raw
+                    // ampersand. This lives in an HTML attribute, where an
+                    // ampersand followed by 'region' is decoded as the
+                    // registered-trademark entity and silently corrupts the URL.
+                    const params = new URLSearchParams({
+                        key: key,
+                        language: @js($locale),
+                        region: 'SA',
+                    });
+                    script.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString();
+                    script.async = true;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+
+                window.veltoMapsLoader.then(() => this.draw()).catch(() => {});
+            },
+
+            draw() {
+                if (! window.google?.maps) return;
+
+                const position = { lat: @js($lat), lng: @js($lng) };
+                const map = new google.maps.Map(this.$refs.canvas, {
+                    center: position,
+                    zoom: 16,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true,
+                });
+                new google.maps.Marker({ position, map });
+
+                this.live = true;
+            },
+
             copy() {
                 navigator.clipboard.writeText(@js($coords)).then(() => {
                     this.copied = true;
@@ -47,32 +98,41 @@
                 });
             },
         }"
+        x-init="boot()"
         class="space-y-3"
     >
-        @if ($staticMap)
-            <a
-                href="{{ $googleUrl }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="block overflow-hidden rounded-xl border border-gray-200 dark:border-white/10"
-            >
-                <img
-                    src="{{ $staticMap }}"
-                    alt="{{ __('Booking location') }}"
-                    loading="lazy"
-                    referrerpolicy="strict-origin-when-cross-origin"
-                    class="block h-auto w-full"
-                />
-            </a>
-        @else
-            {{-- No key configured: say why there is no picture rather than
-                 rendering a broken image. --}}
-            <div class="rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">
-                {{ __('Map unavailable — no Google Maps key configured') }}
-            </div>
-        @endif
+        <div class="relative h-80 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
+            <div x-ref="canvas" class="h-full w-full"></div>
 
-        {{-- The picture shows where. These hand it to a phone, which is what
+            @if ($staticMap)
+                <a
+                    href="{{ $googleUrl }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="absolute inset-0"
+                    x-show="! live"
+                >
+                    <img
+                        src="{{ $staticMap }}"
+                        alt="{{ __('Booking location') }}"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        class="h-full w-full object-cover"
+                    />
+                </a>
+            @else
+                {{-- No key at all: say why there is no map rather than showing
+                     an empty frame. --}}
+                <div
+                    class="absolute inset-0 flex items-center justify-center bg-gray-50 p-4 text-center text-sm text-gray-500 dark:bg-white/5 dark:text-gray-400"
+                    x-show="! live"
+                >
+                    {{ __('Map unavailable — no Google Maps key configured') }}
+                </div>
+            @endif
+        </div>
+
+        {{-- The map shows where. These hand it to a phone, which is what
              dispatch actually needs once they have looked. --}}
         <div class="flex flex-wrap items-center gap-2">
             <a

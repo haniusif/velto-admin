@@ -88,9 +88,43 @@ class AppointmentMapTest extends TestCase
 
         $this->openPage($booking)
             ->assertOk()
+            // The live map is built in the browser, so assert on what the
+            // page must ship for that to be possible.
+            ->assertSee('maps.googleapis.com/maps/api/js', escape: false)
+            ->assertSee('x-ref="canvas"', escape: false)
+            ->assertSee('google.maps.Map', escape: false)
+            // …and on the picture that stands in when it does not come up.
             ->assertSee('maps.googleapis.com/maps/api/staticmap', escape: false)
             ->assertSee('center=24.8112%2C46.6103', escape: false)
             ->assertSee('markers=color%3A0x8863E5%7C24.8112%2C46.6103', escape: false);
+    }
+
+    public function test_the_static_picture_survives_the_live_map_failing(): void
+    {
+        // gm_authFailure is what Google calls on a rejected key, sometimes
+        // after the map object exists. Without it the page would sit on a grey
+        // rectangle whose only explanation is in the browser console.
+        $this->openPage($this->booking(24.8112, 46.6103))
+            ->assertSee('gm_authFailure', escape: false)
+            ->assertSee('live = false', escape: false);
+    }
+
+    public function test_the_loader_url_is_not_mangled_by_html_entity_decoding(): void
+    {
+        // The script URL is assembled inside an HTML attribute, so a literal
+        // ampersand before 'region' decodes to ® and the loader ends up
+        // requesting a corrupt URL. Caught exactly that in review.
+        $html = $this->openPage($this->booking(24.8112, 46.6103))->getContent();
+
+        // Scope to this component's attribute — the page carries several
+        // other x-data blocks, one of which legitimately holds a URL.
+        $start = strpos($html, 'live: false');
+        $attribute = substr($html, $start, strpos($html, 'x-init="boot()"', $start) - $start);
+
+        $this->assertStringNotContainsString('&', html_entity_decode($attribute, ENT_QUOTES),
+            'a raw ampersand in the Alpine attribute will be entity-decoded');
+        $this->assertStringNotContainsString('®', html_entity_decode($attribute, ENT_QUOTES));
+        $this->assertStringContainsString('URLSearchParams', $attribute);
     }
 
     public function test_the_map_offers_a_way_to_actually_drive_there(): void
