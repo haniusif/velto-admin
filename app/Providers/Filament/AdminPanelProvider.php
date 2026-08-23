@@ -2,8 +2,9 @@
 
 namespace App\Providers\Filament;
 
-use Filament\Http\Middleware\Authenticate;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\FontProviders\LocalFontProvider;
+use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -11,8 +12,9 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\FontProviders\LocalFontProvider;
+use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
+use Filament\Tables\Table;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -72,5 +74,17 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    public function boot(): void
+    {
+        // Every price in this business is riyals, but Filament's built-in
+        // default is USD — so a ->money() that forgot to name a currency read
+        // a 35 SAR wash as $35. Not obviously broken, just wrong by a factor
+        // of 3.75, on pages used to settle refunds. Set once for every table
+        // and every infolist so the mistake cannot be made one entry at a
+        // time.
+        Table::configureUsing(fn (Table $table) => $table->defaultCurrency('SAR'));
+        Schema::configureUsing(fn (Schema $schema) => $schema->defaultCurrency('SAR'));
     }
 }

@@ -73,7 +73,9 @@ class AppointmentInfolist
                     ->money(),
                 TextEntry::make('addons_total')
                     ->label(__('Add-ons total'))
-                    ->numeric(),
+                    // Was ->numeric(), so a money field printed a bare "0"
+                    // between two neighbours showing currency.
+                    ->money(),
                 TextEntry::make('total_price')
                     ->label(__('Total'))
                     ->money(),
