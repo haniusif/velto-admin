@@ -518,5 +518,9 @@
     "completed visits only": "الزيارات المكتملة فقط",
     "Nothing booked for today": "لا توجد حجوزات اليوم",
     "Time": "الوقت",
-    "Open": "فتح"
+    "Open": "فتح",
+    "Needs a specialist": "بحاجة إلى أخصائي",
+    "All covered": "الكل مُسند",
+    "Nothing under way": "لا توجد مهمة جارية",
+    "SAR": "ر.س"
 }

@@ -120,7 +120,7 @@ class TodayAppointmentsTest extends TestCase
         $this->booking("{$today} 17:00:00", Appointment::STATUS_IN_PROGRESS, $worker);
         $this->booking("{$today} 19:00:00", Appointment::STATUS_CANCELLED);
 
-        $summary = (new TodayAppointments)->summary();
+        $summary = TodayAppointments::summary();
 
         $this->assertSame(6, $summary['total']);
         $this->assertSame(2, $summary['upcoming']);
@@ -138,14 +138,14 @@ class TodayAppointmentsTest extends TestCase
         $today = $this->riyadhToday();
         $this->booking("{$today} 15:00:00", Appointment::STATUS_CANCELLED);
 
-        $this->assertSame(0, (new TodayAppointments)->summary()['unassigned']);
+        $this->assertSame(0, TodayAppointments::summary()['unassigned']);
     }
 
     public function test_an_unassigned_live_booking_is_counted(): void
     {
         $this->booking($this->riyadhToday().' 15:00:00', Appointment::STATUS_CONFIRMED);
 
-        $this->assertSame(1, (new TodayAppointments)->summary()['unassigned']);
+        $this->assertSame(1, TodayAppointments::summary()['unassigned']);
     }
 
     public function test_the_navigation_badge_counts_today_and_hides_when_empty(): void

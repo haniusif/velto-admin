@@ -48,11 +48,6 @@ class TodayAppointments extends Page implements HasTable
         return __("Today's bookings");
     }
 
-    public function getSubheading(): ?string
-    {
-        return BookingTime::nowWallClock()->format('l, j F Y');
-    }
-
     /** How many bookings are on today, so the badge reads before the page opens. */
     public static function getNavigationBadge(): ?string
     {
@@ -75,8 +70,13 @@ class TodayAppointments extends Page implements HasTable
             ->whereDate('scheduled_at', BookingTime::nowWallClock()->toDateString());
     }
 
-    /** @return array<string,int|float> */
-    public function summary(): array
+    /**
+     * The day's figures, counted once and shared with the stats widget so
+     * the header and the rows can never disagree.
+     *
+     * @return array<string,int|float>
+     */
+    public static function summary(): array
     {
         $rows = self::todaysBookings()->get(['status', 'total_price', 'worker_id']);
 
