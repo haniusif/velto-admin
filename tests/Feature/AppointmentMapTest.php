@@ -139,6 +139,21 @@ class AppointmentMapTest extends TestCase
             ->assertSee('loader.then', escape: false);
     }
 
+    public function test_the_map_comes_before_the_field_list(): void
+    {
+        // It previously sat eleventh among twenty-five fields, so it was on
+        // the page but not where anyone would look for it.
+        $html = $this->openPage($this->booking(24.8112, 46.6103))->getContent();
+
+        $map = strpos($html, 'x-ref="canvas"');
+        // A label that appears only in the field list, not in the page title.
+        $firstField = strpos($html, __('Wash package'));
+
+        $this->assertNotFalse($map, 'the map is not on the page at all');
+        $this->assertNotFalse($firstField, 'the field list did not render');
+        $this->assertLessThan($firstField, $map, 'the map must precede the field list');
+    }
+
     public function test_the_map_offers_a_way_to_actually_drive_there(): void
     {
         // Coordinates on screen are only useful if they can be handed to a

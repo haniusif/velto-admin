@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Appointments\Schemas;
 
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class AppointmentInfolist
@@ -12,6 +13,16 @@ class AppointmentInfolist
     {
         return $schema
             ->components([
+                // Sat eleventh in a flat list of twenty-five fields, which is
+                // nobody's idea of where to look for a location. A dispatcher
+                // opens this page to see where the job is, so it goes first.
+                Section::make(__('Location'))
+                    ->components([
+                        ViewEntry::make('map')
+                            ->hiddenLabel()
+                            ->view('filament.infolists.appointment-map')
+                            ->columnSpanFull(),
+                    ]),
                 TextEntry::make('customer.name')
                     ->label(__('Customer')),
                 TextEntry::make('vehicle.name')
@@ -42,12 +53,6 @@ class AppointmentInfolist
                     ->label(__('Longitude'))
                     ->numeric()
                     ->placeholder('-'),
-                // The coordinates above answer "where is this?" only once you
-                // have pasted them somewhere else.
-                ViewEntry::make('map')
-                    ->label(__('Location'))
-                    ->view('filament.infolists.appointment-map')
-                    ->columnSpanFull(),
                 TextEntry::make('area.name')
                     ->label(__('Area'))
                     ->placeholder('-'),
