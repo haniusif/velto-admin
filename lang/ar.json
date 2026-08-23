@@ -509,5 +509,14 @@
     "Copied": "تم النسخ",
     "No location recorded for this booking": "لا يوجد موقع مسجّل لهذا الحجز",
     "Map unavailable — no Google Maps key configured": "الخريطة غير متاحة — لم يتم ضبط مفتاح خرائط جوجل",
-    "Map could not be loaded": "تعذّر تحميل الخريطة"
+    "Map could not be loaded": "تعذّر تحميل الخريطة",
+    "Today": "اليوم",
+    "Today's bookings": "حجوزات اليوم",
+    "Upcoming": "قادمة",
+    "In progress": "جارية",
+    "Earned today": "إيراد اليوم",
+    "completed visits only": "الزيارات المكتملة فقط",
+    "Nothing booked for today": "لا توجد حجوزات اليوم",
+    "Time": "الوقت",
+    "Open": "فتح"
 }
