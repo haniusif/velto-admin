@@ -11,7 +11,6 @@ use App\Http\Resources\Api\V1\CatalogVehicleColorResource;
 use App\Http\Resources\Api\V1\TimeSlotResource;
 use App\Http\Resources\Api\V1\WashPackageResource;
 use App\Models\AppSetting;
-use App\Models\City;
 use App\Models\Country;
 use App\Models\District;
 use App\Models\Faq;
@@ -186,10 +185,12 @@ class CatalogController extends Controller
             // in the business timezone: the stored digits are Riyadh
             // wall-clock, and reading them as UTC kept every slot on offer for
             // three hours after it had gone.
-            ->filter(fn (TimeSlot $slot): bool => BookingTime::slotInstant(
+            // Hidden rather than offered-then-refused: a slot the booking
+            // endpoint will reject has no business appearing in the picker.
+            ->filter(fn (TimeSlot $slot): bool => BookingTime::isBookable(
                 $slot->date->toDateString(),
                 $slot->start_time,
-            )->isFuture())
+            ))
             ->values();
 
         return response()->json([
@@ -320,8 +321,10 @@ class CatalogController extends Controller
         $n = count($ring);
 
         for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
-            $xi = $ring[$i][0]; $yi = $ring[$i][1];
-            $xj = $ring[$j][0]; $yj = $ring[$j][1];
+            $xi = $ring[$i][0];
+            $yi = $ring[$i][1];
+            $xj = $ring[$j][0];
+            $yj = $ring[$j][1];
             $intersect = (($yi > $y) !== ($yj > $y))
                 && ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi) ?: 1e-12) + $xi);
             if ($intersect) {

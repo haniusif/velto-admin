@@ -5,21 +5,22 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
-use App\Support\BookingTime;
 use App\Models\AppointmentReview;
 use App\Models\CustomerPackage;
-use App\Models\WorkerLocation;
-use App\Models\PackageAddOn;
 use App\Models\PaymentTransaction;
 use App\Models\TimeSlot;
+use App\Models\Vehicle;
 use App\Models\WalletTransaction;
 use App\Models\WashPackage;
+use App\Models\WorkerLocation;
 use App\Services\ARB\ArbGateway;
 use App\Services\Booking\BookingFactory;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Support\BookingTime;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -33,8 +34,7 @@ class AppointmentController extends Controller
         private readonly ArbGateway $arb,
         private readonly NotificationDispatcher $notifications,
         private readonly BookingFactory $bookings,
-    ) {
-    }
+    ) {}
 
     /** GET /api/v1/me/appointments?filter=upcoming|past|all */
     public function index(Request $request): JsonResponse
@@ -382,9 +382,9 @@ class AppointmentController extends Controller
             // Stored naive, compared in the business timezone — see BookingTime.
             $scheduledAt = Carbon::parse($newSlot->date->toDateString().' '.$newSlot->start_time);
 
-            if (BookingTime::slotInstant($newSlot->date->toDateString(), $newSlot->start_time)->isPast()) {
+            if (! BookingTime::isBookable($newSlot->date->toDateString(), $newSlot->start_time)) {
                 throw ValidationException::withMessages([
-                    'time_slot_id' => ['This time slot is in the past.'],
+                    'time_slot_id' => [BookingTime::leadTimeMessage($request->user()?->preferred_language === 'ar')],
                 ]);
             }
 
@@ -416,7 +416,7 @@ class AppointmentController extends Controller
     /**
      * Validate ownership/catalog and compute pricing + snapshots.
      *
-     * @return array{vehicle:\App\Models\Vehicle, package:WashPackage, addOns:\Illuminate\Support\Collection, base:float, addonsTotal:float, total:float, location:array}
+     * @return array{vehicle:Vehicle, package:WashPackage, addOns:Collection, base:float, addonsTotal:float, total:float, location:array}
      */
     private function resolveBooking($customer, array $data): array
     {
@@ -501,7 +501,7 @@ class AppointmentController extends Controller
             ]);
         }
 
-        [$appointment, $payment] = DB::transaction(function () use ($customer, $b, $data, $planId, $extras, $payByCard, $extrasMethod) {
+        [$appointment, $payment] = DB::transaction(function () use ($customer, $b, $data, $planId, $extras, $payByCard) {
             $plan = $this->lockUsablePlan($customer, $planId, $b);
 
             $slot = $this->lockBookableSlot($data['time_slot_id']);
@@ -867,7 +867,7 @@ class AppointmentController extends Controller
 
     private function lockBookableSlot(int $slotId): TimeSlot
     {
-        return $this->bookings->lockBookableSlot($slotId);
+        return $this->bookings->lockBookableSlot($slotId, request()->user()?->preferred_language === 'ar');
     }
 
     private function releaseSlot(?int $slotId): void

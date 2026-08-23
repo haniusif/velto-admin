@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\AppSetting;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
@@ -99,6 +100,63 @@ final class BookingTime
     public static function nowWallClock(): CarbonInterface
     {
         return Carbon::now(config('app.business_timezone'));
+    }
+
+    /**
+     * How many minutes before a slot starts a customer may still book it.
+     *
+     * Read from the admin so the window can be widened on a busy day without
+     * a deploy. Clamped at zero: a negative lead time would mean accepting
+     * bookings for slots that have already started.
+     */
+    public static function minimumLeadMinutes(): int
+    {
+        return max(0, (int) AppSetting::get('booking.min_lead_minutes', '30'));
+    }
+
+    /**
+     * The earliest slot start a customer may book right now.
+     *
+     * One definition for the availability feed, the booking endpoint and the
+     * reschedule endpoint: if they disagreed, the app would offer a time it
+     * then refused to accept.
+     */
+    public static function earliestBookableInstant(): CarbonInterface
+    {
+        return self::nowWallClock()->addMinutes(self::minimumLeadMinutes());
+    }
+
+    /**
+     * Whether a slot is still far enough away to be booked.
+     *
+     * Replaces a bare "has it started?" check, which let someone book a wash
+     * for 18:30 at 18:29 and left no time to get a specialist there.
+     */
+    public static function isBookable(string $date, string $startTime): bool
+    {
+        return self::slotInstant($date, $startTime)->greaterThanOrEqualTo(self::earliestBookableInstant());
+    }
+
+    /**
+     * Why a slot was refused, in the customer's own language.
+     *
+     * The app shows the API's message verbatim, and nothing sets a per-request
+     * locale, so the language is chosen here rather than left to the app
+     * default — otherwise an Arabic customer is told in English why their
+     * booking failed. "In the past" would also be untrue of a slot forty
+     * minutes away that was refused for being too soon.
+     */
+    public static function leadTimeMessage(bool $arabic): string
+    {
+        $minutes = self::minimumLeadMinutes();
+
+        if ($minutes === 0) {
+            return $arabic ? 'انتهى وقت هذا الموعد.' : 'This time slot has already started.';
+        }
+
+        return $arabic
+            ? "يجب الحجز قبل {$minutes} دقيقة على الأقل من موعد الغسيل."
+            : "Bookings must be made at least {$minutes} minutes before the appointment.";
     }
 
     public static function toIso(?CarbonInterface $wallClock): ?string

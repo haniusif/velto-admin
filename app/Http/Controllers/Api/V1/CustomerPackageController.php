@@ -32,8 +32,7 @@ class CustomerPackageController extends Controller
         private readonly ArbGateway $arb,
         private readonly BookingFactory $bookings,
         private readonly NotificationDispatcher $notifications,
-    ) {
-    }
+    ) {}
 
     /** GET /api/v1/me/packages — the customer's plans, newest first. */
     public function index(Request $request): JsonResponse
@@ -151,7 +150,7 @@ class CustomerPackageController extends Controller
                 return [$plan, null];
             }
 
-            $slot = $this->bookings->lockBookableSlot($data['first_booking']['time_slot_id']);
+            $slot = $this->bookings->lockBookableSlot($data['first_booking']['time_slot_id'], $customer->preferred_language === 'ar');
 
             $attributes = $this->bookings->attributes(
                 $visit, $slot, $data['first_booking'],
@@ -232,7 +231,7 @@ class CustomerPackageController extends Controller
             if ($visit) {
                 // Validated now so a bad slot fails before the customer pays,
                 // but no seat and no visit are consumed until capture.
-                $slot = $this->bookings->lockBookableSlot($data['first_booking']['time_slot_id']);
+                $slot = $this->bookings->lockBookableSlot($data['first_booking']['time_slot_id'], $customer->preferred_language === 'ar');
 
                 $attributes = $this->bookings->attributes(
                     $visit, $slot, $data['first_booking'],

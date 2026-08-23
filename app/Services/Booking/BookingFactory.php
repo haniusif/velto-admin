@@ -3,11 +3,11 @@
 namespace App\Services\Booking;
 
 use App\Models\PackageAddOn;
-use App\Support\BookingTime;
 use App\Models\PromoCode;
 use App\Models\TimeSlot;
 use App\Models\Vehicle;
 use App\Models\WashPackage;
+use App\Support\BookingTime;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -141,7 +141,12 @@ class BookingFactory
     }
 
     /** Lock a bookable slot row and validate it; throws on unavailable/full/past. */
-    public function lockBookableSlot(int $slotId): TimeSlot
+    /**
+     * @param  bool  $arabic  Language for the refusal message, which the app
+     *                        shows verbatim. Passed in because this method
+     *                        locks a row and knows nothing about who is booking.
+     */
+    public function lockBookableSlot(int $slotId, bool $arabic = false): TimeSlot
     {
         $slot = TimeSlot::where('is_active', true)->lockForUpdate()->find($slotId);
 
@@ -154,9 +159,9 @@ class BookingFactory
         // scheduled_at itself stays naive wall-clock; only the check is
         // timezone-aware, or a slot that passed up to three hours ago is
         // still accepted.
-        if (BookingTime::slotInstant($slot->date->toDateString(), $slot->start_time)->isPast()) {
+        if (! BookingTime::isBookable($slot->date->toDateString(), $slot->start_time)) {
             throw ValidationException::withMessages([
-                'time_slot_id' => ['This time slot is in the past.'],
+                'time_slot_id' => [BookingTime::leadTimeMessage($arabic)],
             ]);
         }
 
