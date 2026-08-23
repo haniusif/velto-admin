@@ -127,6 +127,18 @@ class AppointmentMapTest extends TestCase
         $this->assertStringContainsString('URLSearchParams', $attribute);
     }
 
+    public function test_a_blocked_window_write_cannot_abort_the_loader(): void
+    {
+        // Privacy extensions can make assigning to window throw — Firefox
+        // reports it as an XrayWrapper cross-origin error. Unguarded, that
+        // exception aborts boot() and the map never loads at all, instead of
+        // degrading to the static picture.
+        $this->openPage($this->booking(24.8112, 46.6103))
+            ->assertSee('try {', escape: false)
+            ->assertSee('catch (e) {}', escape: false)
+            ->assertSee('loader.then', escape: false);
+    }
+
     public function test_the_map_offers_a_way_to_actually_drive_there(): void
     {
         // Coordinates on screen are only useful if they can be handed to a

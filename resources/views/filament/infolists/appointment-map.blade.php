@@ -52,31 +52,48 @@
                 const key = @js($key);
                 if (! key) return;
 
-                // Google calls this globally when the key is rejected, which
-                // can happen after the map object was already built.
-                window.gm_authFailure = () => { this.live = false };
+                // Every window assignment below is wrapped: a privacy or
+                // script-blocking extension can make writing to window throw
+                // (Firefox reports it as an XrayWrapper cross-origin error),
+                // and an exception here would abort boot() and leave the map
+                // permanently unloaded rather than falling back to the picture.
+                try {
+                    // Google calls this globally when the key is rejected,
+                    // which can happen after the map object was already built.
+                    window.gm_authFailure = () => { this.live = false };
+                } catch (e) {}
 
                 if (window.google?.maps) { this.draw(); return }
 
-                window.veltoMapsLoader ??= new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    // Built with URLSearchParams so the source carries no raw
-                    // ampersand. This lives in an HTML attribute, where an
-                    // ampersand followed by 'region' is decoded as the
-                    // registered-trademark entity and silently corrupts the URL.
-                    const params = new URLSearchParams({
-                        key: key,
-                        language: @js($locale),
-                        region: 'SA',
-                    });
-                    script.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString();
-                    script.async = true;
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
+                let loader;
+                try {
+                    loader = window.veltoMapsLoader;
+                } catch (e) {}
 
-                window.veltoMapsLoader.then(() => this.draw()).catch(() => {});
+                if (! loader) {
+                    loader = new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        // Built with URLSearchParams so the source carries no
+                        // raw ampersand. This lives in an HTML attribute, where
+                        // an ampersand followed by 'region' is decoded as the
+                        // registered-trademark entity and silently corrupts the
+                        // URL.
+                        const params = new URLSearchParams({
+                            key: key,
+                            language: @js($locale),
+                            region: 'SA',
+                        });
+                        script.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString();
+                        script.async = true;
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+
+                    try { window.veltoMapsLoader = loader } catch (e) {}
+                }
+
+                loader.then(() => this.draw()).catch(() => {});
             },
 
             draw() {
