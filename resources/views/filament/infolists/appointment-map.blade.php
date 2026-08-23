@@ -42,6 +42,10 @@
     <div
         x-data="{
             live: false,
+            // The static image is a separate Google API and may not be
+            // enabled on the same key — it answers 403 on production today,
+            // which renders as a torn-image icon unless caught.
+            pictureFailed: false,
             copied: false,
 
             boot() {
@@ -110,7 +114,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="absolute inset-0"
-                    x-show="! live"
+                    x-show="! live && ! pictureFailed"
                 >
                     <img
                         src="{{ $staticMap }}"
@@ -118,18 +122,27 @@
                         loading="lazy"
                         referrerpolicy="strict-origin-when-cross-origin"
                         class="h-full w-full object-cover"
+                        x-on:error="pictureFailed = true"
                     />
                 </a>
-            @else
-                {{-- No key at all: say why there is no map rather than showing
-                     an empty frame. --}}
-                <div
-                    class="absolute inset-0 flex items-center justify-center bg-gray-50 p-4 text-center text-sm text-gray-500 dark:bg-white/5 dark:text-gray-400"
-                    x-show="! live"
-                >
-                    {{ __('Map unavailable — no Google Maps key configured') }}
-                </div>
             @endif
+
+            {{-- Last resort: neither the live map nor the picture came up. Say
+                 so and keep the location reachable, rather than leaving an
+                 empty frame or a broken-image icon. --}}
+            <div
+                class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 p-4 text-center text-sm text-gray-500 dark:bg-white/5 dark:text-gray-400"
+                x-show="! live @if ($staticMap) && pictureFailed @endif"
+                x-cloak
+            >
+                <span>{{ __('Map could not be loaded') }}</span>
+                <a
+                    href="{{ $googleUrl }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-medium text-primary-600 underline dark:text-primary-400"
+                >{{ $coords }}</a>
+            </div>
         </div>
 
         {{-- The map shows where. These hand it to a phone, which is what

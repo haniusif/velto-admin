@@ -180,10 +180,20 @@ class AppointmentMapTest extends TestCase
 
         $this->openPage($this->booking(24.8112, 46.6103))
             ->assertOk()
-            ->assertSee(__('Map unavailable — no Google Maps key configured'))
+            ->assertSee(__('Map could not be loaded'))
             ->assertDontSee('staticmap', escape: false)
             // The links still work without a key — they need no API at all.
             ->assertSee('google.com/maps/dir/?api=1&amp;destination=24.8112,46.6103', escape: false);
+    }
+
+    public function test_a_static_image_that_will_not_load_is_caught(): void
+    {
+        // Static Maps is a separately-enabled API: production's key answers
+        // 403 for it today. Without an error handler the fallback for a failed
+        // live map is itself a broken image.
+        $this->openPage($this->booking(24.8112, 46.6103))
+            ->assertSee('x-on:error="pictureFailed = true"', escape: false)
+            ->assertSee(__('Map could not be loaded'));
     }
 
     public function test_a_latitude_without_a_longitude_is_not_half_a_map(): void

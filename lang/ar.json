@@ -508,5 +508,6 @@
     "Directions": "الاتجاهات",
     "Copied": "تم النسخ",
     "No location recorded for this booking": "لا يوجد موقع مسجّل لهذا الحجز",
-    "Map unavailable — no Google Maps key configured": "الخريطة غير متاحة — لم يتم ضبط مفتاح خرائط جوجل"
+    "Map unavailable — no Google Maps key configured": "الخريطة غير متاحة — لم يتم ضبط مفتاح خرائط جوجل",
+    "Map could not be loaded": "تعذّر تحميل الخريطة"
 }
