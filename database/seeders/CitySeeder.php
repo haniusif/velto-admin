@@ -6,24 +6,14 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Data snapshot for `cities` (11 rows).
- *
- * No longer a verbatim dump: Velto serves Riyadh, Jeddah, Taif and Yanbu, so
- * the seven cities it does not serve are seeded switched off, and Yanbu —
- * which the original snapshot never contained — is seeded on. A fresh database
- * therefore offers the same four cities production does, instead of ten.
+ * Auto-generated data snapshot for `cities` (10 rows).
+ * Regenerated from the live `velto_admin` database.
  */
 class CitySeeder extends Seeder
 {
     public function run(): void
     {
-        // MySQL only: SQLite rejects the statement outright, which kept this
-        // seeder — and so the city coverage it defines — out of the tests.
-        $mysql = DB::connection()->getDriverName() === 'mysql';
-
-        if ($mysql) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('cities')->truncate();
 
         $rows = [
@@ -59,7 +49,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '21.3891000',
                 'longitude' => '39.8579000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -71,7 +61,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '24.5247000',
                 'longitude' => '39.5692000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -83,7 +73,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '26.4207000',
                 'longitude' => '50.0888000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -95,7 +85,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '26.2794000',
                 'longitude' => '50.2083000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -107,7 +97,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '26.2361000',
                 'longitude' => '50.0393000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -119,7 +109,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '28.3998000',
                 'longitude' => '36.5700000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -131,7 +121,7 @@ class CitySeeder extends Seeder
                 'country' => 'SA',
                 'latitude' => '18.2164000',
                 'longitude' => '42.5053000',
-                'is_active' => 0,
+                'is_active' => 1,
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
@@ -147,26 +137,12 @@ class CitySeeder extends Seeder
                 'created_at' => '2026-05-10 17:30:31',
                 'updated_at' => '2026-05-10 17:30:31',
             ],
-            [
-                'id' => 11,
-                'name' => 'Yanbu',
-                'name_ar' => 'ينبع',
-                'slug' => 'yanbu',
-                'country' => 'SA',
-                'latitude' => '24.0895000',
-                'longitude' => '38.0618000',
-                'is_active' => 1,
-                'created_at' => '2026-08-29 00:00:00',
-                'updated_at' => '2026-08-29 00:00:00',
-            ],
         ];
 
         foreach (array_chunk($rows, 200) as $chunk) {
             DB::table('cities')->insert($chunk);
         }
 
-        if ($mysql) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
-        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }
