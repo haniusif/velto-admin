@@ -14,6 +14,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentTimezone;
 use Filament\Tables\Table;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -86,5 +87,15 @@ class AdminPanelProvider extends PanelProvider
         // time.
         Table::configureUsing(fn (Table $table) => $table->defaultCurrency('SAR'));
         Schema::configureUsing(fn (Schema $schema) => $schema->defaultCurrency('SAR'));
+
+        // Timestamps are stored as true UTC instants — created_at, paid_at,
+        // completed_at and the rest — so the admin was showing staff a clock
+        // three hours behind the one on the wall. Display converts to Riyadh.
+        //
+        // This does NOT apply to a booking's scheduled_at or a slot's
+        // date/start_time: those hold Riyadh wall-clock digits stored naively,
+        // are already correct as written, and are pinned to app.timezone at
+        // each call site so this conversion cannot shift them a second time.
+        FilamentTimezone::set(config('app.business_timezone'));
     }
 }

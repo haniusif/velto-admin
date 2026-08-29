@@ -52,7 +52,7 @@ class AppointmentsTable
                     ->description(fn (Appointment $r): ?string => $r->vehicle_label)
                     ->searchable(),
 
-                TextColumn::make('scheduled_at')
+                TextColumn::make('scheduled_at')->timezone(config('app.timezone'))
                     ->label(__('Scheduled'))
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),

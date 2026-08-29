@@ -41,7 +41,7 @@ class PromoCodesTable
                         : $state.' / '.$r->usage_limit)
                     ->sortable(),
 
-                TextColumn::make('expires_at')
+                TextColumn::make('expires_at')->timezone(config('app.timezone'))
                     ->label(__('Expires'))
                     ->dateTime('Y-m-d')
                     ->placeholder('—')

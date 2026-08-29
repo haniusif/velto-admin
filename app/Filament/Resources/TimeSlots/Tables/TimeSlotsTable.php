@@ -7,13 +7,13 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
-use Filament\Forms\Components\DatePicker;
-use Filament\Schemas\Components\Utilities\Get;
 
 class TimeSlotsTable
 {
@@ -21,24 +21,24 @@ class TimeSlotsTable
     {
         return $table
             ->groups([
-                \Filament\Tables\Grouping\Group::make('date')
+                Group::make('date')->timezone(config('app.timezone'))
                     ->label(__('Date'))
                     ->date('Y-m-d (l)')
                     ->collapsible(),
             ])
             ->defaultGroup('date')
             ->columns([
-                TextColumn::make('date')
+                TextColumn::make('date')->timezone(config('app.timezone'))
                     ->label(__('Date'))
                     ->date('Y-m-d')
                     ->sortable(),
 
-                TextColumn::make('start_time')
+                TextColumn::make('start_time')->timezone(config('app.timezone'))
                     ->label(__('Start'))
                     ->time('H:i')
                     ->sortable(),
 
-                TextColumn::make('end_time')
+                TextColumn::make('end_time')->timezone(config('app.timezone'))
                     ->label(__('End'))
                     ->time('H:i'),
 

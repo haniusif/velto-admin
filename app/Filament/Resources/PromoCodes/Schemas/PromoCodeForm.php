@@ -107,8 +107,8 @@ class PromoCodeForm
                             ->disabled()
                             ->dehydrated(false),
 
-                        DateTimePicker::make('starts_at')->label(__('Starts'))->seconds(false),
-                        DateTimePicker::make('expires_at')
+                        DateTimePicker::make('starts_at')->timezone(config('app.timezone'))->label(__('Starts'))->seconds(false),
+                        DateTimePicker::make('expires_at')->timezone(config('app.timezone'))
                             ->label(__('Expires'))
                             ->seconds(false)
                             // withinWindow() requires starts_at past AND expires_at future;

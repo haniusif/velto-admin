@@ -18,18 +18,18 @@ class TimeSlotForm
                 Section::make(__('When'))
                     ->columns(3)
                     ->components([
-                        DatePicker::make('date')
+                        DatePicker::make('date')->timezone(config('app.timezone'))
                             ->label(__('Date'))
                             ->required()
                             ->native(false)
                             ->minDate(today()),
 
-                        TimePicker::make('start_time')
+                        TimePicker::make('start_time')->timezone(config('app.timezone'))
                             ->label(__('Start'))
                             ->seconds(false)
                             ->required(),
 
-                        TimePicker::make('end_time')
+                        TimePicker::make('end_time')->timezone(config('app.timezone'))
                             ->label(__('End'))
                             ->seconds(false)
                             ->required()

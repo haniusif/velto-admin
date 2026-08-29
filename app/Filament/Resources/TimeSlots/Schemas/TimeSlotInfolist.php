@@ -16,9 +16,9 @@ class TimeSlotInfolist
                 Section::make()
                     ->columns(3)
                     ->components([
-                        TextEntry::make('date')->label(__('Date'))->date('l, Y-m-d'),
-                        TextEntry::make('start_time')->label(__('Start'))->time('H:i'),
-                        TextEntry::make('end_time')->label(__('End'))->time('H:i'),
+                        TextEntry::make('date')->timezone(config('app.timezone'))->label(__('Date'))->date('l, Y-m-d'),
+                        TextEntry::make('start_time')->timezone(config('app.timezone'))->label(__('Start'))->time('H:i'),
+                        TextEntry::make('end_time')->timezone(config('app.timezone'))->label(__('End'))->time('H:i'),
                         TextEntry::make('capacity')->label(__('Capacity')),
                         TextEntry::make('booked_count')->label(__('Booked')),
                         IconEntry::make('is_active')->label(__('Active'))->boolean(),

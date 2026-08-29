@@ -31,7 +31,7 @@ class AppointmentsRelationManager extends RelationManager
             ->recordTitleAttribute('service_name')
             ->columns([
                 TextColumn::make('id')->label('#')->sortable(),
-                TextColumn::make('scheduled_at')
+                TextColumn::make('scheduled_at')->timezone(config('app.timezone'))
                     ->label(__('When'))
                     // Riyadh wall-clock digits stored naively: shown as
                     // written, never shifted into another zone.

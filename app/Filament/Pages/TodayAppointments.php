@@ -107,7 +107,7 @@ class TodayAppointments extends Page implements HasTable
         return $table
             ->query(fn (): Builder => self::todaysBookings()->with(['customer', 'worker']))
             ->columns([
-                TextColumn::make('scheduled_at')
+                TextColumn::make('scheduled_at')->timezone(config('app.timezone'))
                     ->label(__('Time'))
                     // Riyadh wall-clock digits printed as stored, in the
                     // 12-hour form both apps now use.

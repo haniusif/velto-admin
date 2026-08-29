@@ -39,7 +39,7 @@ class AppointmentInfolist
                     ->placeholder('-'),
                 TextEntry::make('status')
                     ->label(__('Status')),
-                TextEntry::make('scheduled_at')
+                TextEntry::make('scheduled_at')->timezone(config('app.timezone'))
                     ->label(__('Scheduled at'))
                     ->dateTime(),
                 TextEntry::make('address_label')

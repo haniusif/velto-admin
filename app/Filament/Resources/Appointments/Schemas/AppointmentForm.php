@@ -4,8 +4,8 @@ namespace App\Filament\Resources\Appointments\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
@@ -53,7 +53,7 @@ class AppointmentForm
                     ->required()
                     ->default('confirmed'),
 
-                DateTimePicker::make('scheduled_at')
+                DateTimePicker::make('scheduled_at')->timezone(config('app.timezone'))
                     ->label(__('Scheduled at'))
                     ->required(),
 
