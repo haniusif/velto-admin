@@ -16,15 +16,14 @@ use Tests\TestCase;
 /**
  * The admin holds two kinds of time in the same database.
  *
- * created_at, completed_at and the rest are true UTC instants, and were being
- * shown to staff three hours behind the clock on the wall. scheduled_at and a
- * slot's date/start_time are Riyadh wall-clock digits stored naively — already
- * correct as written, and ruined by a second conversion: an 18:30 wash would
- * read 21:30.
+ * The app, the database connection and the panel all now name Asia/Riyadh, so
+ * a stored value means what it says and is displayed unchanged.
  *
- * So the panel converts for display, and every naive column opts out. Getting
- * either half wrong is a three-hour error nobody would notice until a
- * specialist turned up at the wrong time.
+ * That agreement is the whole safety property. If app.timezone and the
+ * connection zone ever drift apart, MySQL converts TIMESTAMP columns with one
+ * zone while PHP reads them in another and every timestamp lands three hours
+ * out — the kind of error nobody notices until a specialist turns up at the
+ * wrong time.
  */
 class AdminTimezoneDisplayTest extends TestCase
 {
@@ -74,7 +73,7 @@ class AdminTimezoneDisplayTest extends TestCase
             'payment_status' => 'paid',
         ]);
 
-        // A true UTC instant: 22:00 UTC is 01:00 the next day in Riyadh.
+        // Written by the app, so already Riyadh now that app.timezone is.
         $appointment->forceFill(['created_at' => '2026-08-29 22:00:00'])->save();
 
         return $appointment->refresh();
@@ -85,12 +84,14 @@ class AdminTimezoneDisplayTest extends TestCase
         $this->assertSame(config('app.business_timezone'), FilamentTimezone::get());
     }
 
-    public function test_storage_is_left_on_utc(): void
+    public function test_the_application_and_the_database_name_the_same_zone(): void
     {
-        // The half of this that must not change: flipping app.timezone would
-        // write new rows in Riyadh while every existing row stayed UTC, in the
-        // same column, with nothing to tell them apart.
-        $this->assertSame('UTC', config('app.timezone'));
+        // The app now runs on Riyadh. That is only safe because the connection
+        // is pinned to the matching offset: MySQL converts TIMESTAMP columns
+        // with the session zone, so if these two ever drift apart every read
+        // comes back three hours from what was written.
+        $this->assertSame('Asia/Riyadh', config('app.timezone'));
+        $this->assertSame('+03:00', config('database.connections.mysql.timezone'));
     }
 
     public function test_a_booking_time_is_shown_exactly_as_booked(): void
@@ -104,14 +105,17 @@ class AdminTimezoneDisplayTest extends TestCase
         $this->assertStringNotContainsString('21:30:00', $html, 'the booking time was converted twice');
     }
 
-    public function test_a_real_instant_is_converted_for_the_reader(): void
+    public function test_a_timestamp_is_shown_in_the_zone_it_was_written_in(): void
     {
-        // 22:00 UTC is 01:00 Riyadh the following day.
+        // Now that the app writes Riyadh, a stored 22:00 means 22:00 here and
+        // is displayed unchanged. Anything else would mean the panel is
+        // converting a value that needs no conversion — the same double-shift
+        // the wall-clock pins exist to prevent, just on a different column.
         $html = $this->get(AppointmentResource::getUrl('view', ['record' => $this->booking()]))
             ->getContent();
 
-        $this->assertStringContainsString('Aug 30, 2026 01:00:00', $html, 'created_at is still being shown in UTC');
-        $this->assertStringNotContainsString('Aug 29, 2026 22:00:00', $html, 'created_at is unconverted');
+        $this->assertStringContainsString('Aug 29, 2026 22:00:00', $html, 'created_at was shifted');
+        $this->assertStringNotContainsString('Aug 30, 2026 01:00:00', $html, 'created_at was converted twice');
     }
 
     public function test_every_naive_column_in_the_panel_opts_out(): void

@@ -57,6 +57,11 @@ return [
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
+            // Matches app.timezone. MySQL stores TIMESTAMP columns as UTC and
+            // converts them using the session zone, so without this the
+            // database keeps answering in UTC while PHP speaks Riyadh and every
+            // read comes back three hours behind what was written.
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
@@ -77,6 +82,11 @@ return [
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
+            // Matches app.timezone. MySQL stores TIMESTAMP columns as UTC and
+            // converts them using the session zone, so without this the
+            // database keeps answering in UTC while PHP speaks Riyadh and every
+            // read comes back three hours behind what was written.
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([

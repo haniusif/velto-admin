@@ -65,7 +65,15 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Riyadh, not UTC. Every timestamp Laravel writes and reads is now in the
+    // zone the business runs in, so now(), the scheduler, the logs and the
+    // admin all agree with the clock on the wall.
+    //
+    // This only holds because the database connection is pinned to +03:00 as
+    // well: MySQL keeps TIMESTAMP columns in UTC internally and converts them
+    // on the way in and out, so both ends must name the same zone or every
+    // read is three hours off what was written.
+    'timezone' => env('APP_TIMEZONE', 'Asia/Riyadh'),
 
     /*
     |--------------------------------------------------------------------------

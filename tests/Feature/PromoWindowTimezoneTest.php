@@ -49,15 +49,19 @@ class PromoWindowTimezoneTest extends TestCase
         $this->assertFalse($code->withinWindow(), 'an expired code is still redeemable');
     }
 
-    public function test_the_naive_comparison_that_caused_the_bug_disagrees(): void
+    public function test_a_naive_comparison_now_agrees_with_the_explicit_one(): void
     {
-        // Documents the defect rather than the fix: the old comparison called
-        // an hour-expired code "still live". If this ever stops disagreeing,
-        // the timezones have converged and the fix is moot.
+        // This used to document the defect: on UTC, an hour-expired code read
+        // as "still live" because its digits were interpreted three hours
+        // early. The comment said that if the readings ever stopped
+        // disagreeing, the timezones had converged — which is now the case.
+        //
+        // instant() stays because it names the zone the digits are written in
+        // rather than inheriting whatever the app happens to be set to.
         $expired = $this->riyadhNow()->subHour();
         $naive = Carbon::parse($expired->format('Y-m-d H:i:s'));
 
-        $this->assertTrue($naive->isFuture(), 'the naive read must still look future-dated');
+        $this->assertTrue($naive->isPast(), 'an hour-expired code must read as expired');
         $this->assertTrue(BookingTime::instant($naive)->isPast());
     }
 

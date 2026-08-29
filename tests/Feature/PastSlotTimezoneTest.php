@@ -45,17 +45,23 @@ class PastSlotTimezoneTest extends TestCase
         $this->assertTrue($instant->isPast(), 'an hour-old slot must read as past');
     }
 
-    public function test_the_naive_parse_that_caused_the_bug_disagrees(): void
+    public function test_a_naive_parse_now_agrees_with_the_explicit_one(): void
     {
-        // Documents the defect rather than the fix: within the three-hour
-        // offset the old comparison says "future" for a slot already gone.
+        // This used to document the defect: while the app ran on UTC, parsing
+        // a slot's digits without naming a zone read them three hours early,
+        // so an hour-old slot still looked like the future.
+        //
+        // The app now runs on Riyadh, so the two readings have converged and
+        // the disagreement is gone. slotInstant() is kept because it states
+        // which zone the digits mean instead of inheriting it, which is what
+        // makes the next timezone change safe rather than silent.
         $moment = $this->riyadhNow()->subHour();
         $naive = CarbonImmutable::parse($moment->toDateString().' '.$moment->format('H:i:s'));
+        $explicit = BookingTime::slotInstant($moment->toDateString(), $moment->format('H:i:s'));
 
-        $this->assertTrue($naive->isFuture());
-        $this->assertTrue(
-            BookingTime::slotInstant($moment->toDateString(), $moment->format('H:i:s'))->isPast(),
-        );
+        $this->assertTrue($naive->isPast(), 'an hour-old slot must read as past');
+        $this->assertTrue($explicit->isPast());
+        $this->assertSame($explicit->format('Y-m-d H:i'), $naive->format('Y-m-d H:i'));
     }
 
     public function test_availability_hides_a_slot_that_has_already_started(): void
