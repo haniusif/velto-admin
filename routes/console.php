@@ -55,3 +55,14 @@ Schedule::call($scheduled('packages:cancel-stale'))->name('packages-cancel-stale
 // Settle lapsed prepaid plans. Expiry is already enforced live, so this only
 // keeps the stored status honest for reporting — hourly is ample.
 Schedule::call($scheduled('packages:expire'))->name('packages-expire')->hourly();
+
+// Ask the bank about payments whose redirect or webhook never arrived. Without
+// this a charge that succeeded but was never reported leaves the customer paid
+// and unbooked, indistinguishable from someone who simply walked away.
+//
+// Every check is one HTTP call to the gateway — Neoleap has no bulk lookup — so
+// this runs at a modest cadence and caps how many rows it takes per pass.
+Schedule::call($scheduled('payments:reconcile'))
+    ->name('payments-reconcile')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping();
