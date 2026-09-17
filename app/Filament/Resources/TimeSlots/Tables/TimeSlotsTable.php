@@ -21,7 +21,7 @@ class TimeSlotsTable
     {
         return $table
             ->groups([
-                Group::make('date')->timezone(config('app.timezone'))
+                Group::make('date')
                     ->label(__('Date'))
                     ->date('Y-m-d (l)')
                     ->collapsible(),
