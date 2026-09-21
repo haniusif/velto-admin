@@ -4,7 +4,7 @@
   <section class="page__hero">
     <div class="container">
       <span class="eyebrow eyebrow--pill" data-i18n><span data-ar>مناطق التغطية</span><span data-en>Coverage</span></span>
-      <h1 class="page__title" data-i18n="block"><span data-ar>نصلك في {{ $coverage->count() }} حي بالرياض</span><span data-en>Serving {{ $coverage->count() }} districts in Riyadh</span></h1>
+      <h1 class="page__title" data-i18n="block"><span data-ar>نصلك في الرياض</span><span data-en>We come to you in Riyadh</span></h1>
       <p class="page__sub" data-i18n="block"><span data-ar>تحقق من موقعك على الخريطة — وإن كنت خارج التغطية حالياً، تواصل معنا وسنخبرك عند وصولنا إليك.</span><span data-en>Check your spot on the map — if you're outside coverage for now, tell us and we'll let you know when we reach you.</span></p>
     </div>
   </section>

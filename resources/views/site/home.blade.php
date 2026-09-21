@@ -99,8 +99,8 @@
           <div class="trust__lbl" data-i18n><span data-ar>أيام الأسبوع</span><span data-en>Days a week</span></div>
         </div>
         <div class="trust__cell" data-reveal data-delay="2">
-          <div class="trust__num tnum">{{ $coverage->count() }}</div>
-          <div class="trust__lbl" data-i18n><span data-ar>حي مغطّى</span><span data-en>Districts covered</span></div>
+          <div class="trust__num" data-i18n><span data-ar>نفس اليوم</span><span data-en>Same-day</span></div>
+          <div class="trust__lbl" data-i18n><span data-ar>مواعيد متاحة</span><span data-en>Booking</span></div>
         </div>
         <div class="trust__cell" data-reveal data-delay="3">
           <div class="trust__num" data-i18n><span data-ar>الرياض</span><span data-en>Riyadh</span></div>
@@ -285,8 +285,8 @@
       <div class="section__head" data-reveal>
         <span class="eyebrow eyebrow--pill" data-i18n><span data-ar>مناطق التغطية</span><span data-en>Coverage</span></span>
         <h2 class="section__title" data-i18n="block">
-          <span data-ar>نصلك في <span class="hl">{{ $coverage->count() }} حي</span> بالرياض</span>
-          <span data-en>Serving <span class="hl">{{ $coverage->count() }} districts</span> in Riyadh</span>
+          <span data-ar>نصلك في <span class="hl">الرياض</span></span>
+          <span data-en>We come to you in <span class="hl">Riyadh</span></span>
         </h2>
       </div>
       <div class="chips" style="justify-content:center; max-width: 900px; margin: 0 auto;" data-reveal>
