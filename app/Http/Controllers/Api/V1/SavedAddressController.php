@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PlainText;
 use App\Http\Resources\Api\V1\SavedAddressResource;
 use App\Models\SavedAddress;
 use Illuminate\Http\JsonResponse;
@@ -22,10 +23,10 @@ class SavedAddressController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'label' => ['required', 'string', 'max:120'],
-            'subtitle' => ['nullable', 'string', 'max:255'],
-            'lat' => ['required', 'numeric', 'between:-90,90'],
-            'lng' => ['required', 'numeric', 'between:-180,180'],
+            'label' => ['required', 'string', 'max:60', new PlainText],
+            'subtitle' => ['nullable', 'string', 'max:255', new PlainText],
+            'lat' => ['required', 'numeric', 'between:16,33'],
+            'lng' => ['required', 'numeric', 'between:34,56'],
             'is_covered' => ['nullable', 'boolean'],
             'icon_key' => ['nullable', 'string', 'in:home,work,place'],
         ]);

@@ -7,7 +7,7 @@ use App\Support\SaudiPhone;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\WorkerResource;
 use App\Models\Worker;
-use App\Services\JawalySMSService;
+use App\Services\Auth\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class WorkerAuthController extends Controller
 {
-    public function __construct(private readonly JawalySMSService $sms) {}
+    public function __construct(private readonly OtpService $otp) {}
 
     /** POST /api/v1/worker/auth/request-otp */
     public function requestOtp(Request $request): JsonResponse
@@ -33,89 +33,14 @@ class WorkerAuthController extends Controller
             Log::info('Worker OTP requested for unknown/inactive phone', ['phone' => $phone]);
 
             return response()->json([
-                'data' => ['phone' => $phone, 'expires_in' => 600, 'dev_code' => null],
+                'data' => ['phone' => $phone, 'expires_in' => OtpService::LIFETIME_MINUTES * 60, 'dev_code' => null],
             ]);
         }
 
-        // Allowlisted numbers are resolved first so the throttle can skip
-        // them: no SMS is sent, so there is nothing to rate-limit, and an App
-        // Store reviewer moving between the customer and worker apps shares
-        // one phone_otps throttle and would otherwise be locked out for a
-        // minute.
-        $isTestPhone = in_array($phone, (array) config('services.otp.test_phones', []), true);
-
-        // Throttle: max 1 OTP request per phone per 60 seconds.
-        $recent = $isTestPhone ? null : DB::table('phone_otps')
-            ->where('phone', $phone)
-            ->where('created_at', '>=', now()->subSeconds(60))
-            ->orderByDesc('id')
-            ->first();
-
-        if ($recent) {
-            $elapsed = now()->getTimestamp() - \Carbon\Carbon::parse($recent->created_at)->getTimestamp();
-            $retryAfter = max(1, 60 - $elapsed);
-
-            return response()->json([
-                'message' => 'Please wait before requesting another code.',
-                'errors' => ['phone' => ["Try again in {$retryAfter}s."]],
-            ], 429)->header('Retry-After', (string) $retryAfter);
-        }
-
-        $smsConfigured = $this->sms->isConfigured();
-
-        // A real code, generated per request. This was previously the fixed
-        // string '1234' whenever SMS was configured, which meant anyone who
-        // knew a phone number could sign in as that account without ever
-        // receiving a message.
-        //
-        // random_int is the cryptographic generator; rand()/mt_rand() are
-        // predictable from a handful of observed codes.
-        //
-        // The 1111 backdoor stays, but ONLY when SMS is not configured — that
-        // is local development, where no message can arrive.
-        // An allowlisted test number gets a known code and no SMS attempt:
-        // review accounts and QA handsets cannot receive a real message.
-        $code = match (true) {
-            $isTestPhone => (string) config('services.otp.test_code', '1234'),
-            $smsConfigured => str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT),
-            default => '1111',
-        };
-
-        DB::table('phone_otps')->insert([
-            'phone' => $phone,
-            'code' => $code,
-            'expires_at' => now()->addMinutes(10),
-            'attempts' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        if ($smsConfigured && ! $isTestPhone) {
-            $result = $this->sms->sendOtp($phone, $code);
-            if (! ($result['success'] ?? false)) {
-                Log::warning('Worker OTP SMS send failed', ['phone' => $phone, 'result' => $result]);
-
-                // Undo the row: leaving it behind would strand a code nobody
-                // received AND hold the 60s throttle against a customer who
-                // never got a message, so they could not even retry.
-                DB::table('phone_otps')->where('phone', $phone)->where('code', $code)->delete();
-
-                return response()->json([
-                    'message' => 'Could not send the code. Please try again.',
-                    'errors' => ['phone' => ['SMS provider error.']],
-                    'code' => 'sms_send_failed',
-                ], 502);
-            }
-        } else {
-            Log::info('Worker OTP (local backdoor — SMS not configured)', ['phone' => $phone, 'code' => $code]);
-        }
+        $devCode = $this->otp->issue($phone, 'worker');
 
         return response()->json([
-            'data' => [
-                'phone' => $phone,
-                'expires_in' => 600,
-                'dev_code' => $smsConfigured ? null : $code,
-            ],
+            'data' => ['phone' => $phone, 'expires_in' => OtpService::LIFETIME_MINUTES * 60, 'dev_code' => $devCode],
         ]);
     }
 
@@ -124,7 +49,7 @@ class WorkerAuthController extends Controller
     {
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:32', new SaudiMobile],
-            'code' => ['required', 'string', 'size:4'],
+            'code' => ['required', 'string', 'digits:4'],
         ]);
 
         $phone = SaudiPhone::normalize($data['phone']);
@@ -137,28 +62,21 @@ class WorkerAuthController extends Controller
             ], 403);
         }
 
-        $otp = DB::table('phone_otps')
-            ->where('phone', $phone)
-            ->whereNull('used_at')
-            ->where('expires_at', '>', now())
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $otp || $otp->code !== $data['code']) {
+        if (! $this->otp->verify($phone, $data['code'])) {
             return response()->json([
                 'message' => 'Invalid or expired code.',
                 'errors' => ['code' => ['Invalid or expired code.']],
+                'code' => 'invalid_code',
             ], 422);
         }
 
-        DB::table('phone_otps')->where('id', $otp->id)->update([
-            'used_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $worker->forceFill(['last_login_at' => now()])->save();
 
-        $token = $worker->createToken('worker-mobile')->plainTextToken;
+        $token = $worker->createToken('worker-mobile', ['*'], now()->addDays(180))->plainTextToken;
+        $stale = $worker->tokens()->orderByDesc('id')->skip(5)->take(100)->pluck('id');
+        if ($stale->isNotEmpty()) {
+            $worker->tokens()->whereIn('id', $stale)->delete();
+        }
 
         return response()->json([
             'data' => [

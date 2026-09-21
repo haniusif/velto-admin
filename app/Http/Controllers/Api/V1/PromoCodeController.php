@@ -20,8 +20,8 @@ class PromoCodeController extends Controller
     public function preview(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:40'],
-            'subtotal' => ['required', 'numeric', 'min:0'],
+            'code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'subtotal' => ['required', 'numeric', 'min:0', 'max:100000'],
         ]);
 
         $customer = $request->user();

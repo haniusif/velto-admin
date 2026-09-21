@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PlainText;
 use App\Http\Resources\Api\V1\VehicleResource;
 use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
@@ -99,12 +100,14 @@ class VehicleController extends Controller
     private function validated(Request $request, bool $isUpdate = false): array
     {
         return $request->validate([
-            'name' => ['nullable', 'string', 'max:255'],
-            'brand' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
-            'model' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
-            'color' => ['nullable', 'string', 'max:255'],
-            'plate' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:32'],
-            'photo_url' => ['nullable', 'string', 'max:1024'],
+            'name' => ['nullable', 'string', 'max:40', new PlainText],
+            'brand' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:60', new PlainText],
+            'model' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:60', new PlainText],
+            'color' => ['nullable', 'string', 'max:40', new PlainText],
+            // Saudi plates: up to four digits and three letters (Arabic or Latin), spaces allowed.
+            'plate' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:12', 'regex:/^[\p{L}\p{N}\s\-]{2,12}$/u'],
+            // Only a path this API handed out from its own upload endpoint.
+            'photo_url' => ['nullable', 'string', 'max:1024', 'regex:#^(vehicle-photos/[A-Za-z0-9_\-./]+|https?://[^\s/]+/storage/vehicle-photos/[A-Za-z0-9_\-./]+)$#'],
         ]);
     }
 

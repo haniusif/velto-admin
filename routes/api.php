@@ -43,12 +43,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/wash-packages', [CatalogController::class, 'washPackages']);
         Route::get('/coverage', [CatalogController::class, 'coverage']);
         Route::get('/coverage/zones', [CatalogController::class, 'coverageZones']);
-        Route::get('/coverage/check', [CatalogController::class, 'coverageCheck']);
+        Route::get('/coverage/check', [CatalogController::class, 'coverageCheck'])->middleware('throttle:60,1');
         Route::get('/availability', [CatalogController::class, 'availability']);
     });
 
     // Public ARB/Neoleap payment callbacks (called by the bank, not the app).
-    Route::prefix('payments/arb')->group(function () {
+    Route::prefix('payments/arb')->middleware('throttle:webhook')->group(function () {
         Route::match(['get', 'post'], '/callback', [PaymentController::class, 'callback']);
         Route::match(['get', 'post'], '/error', [PaymentController::class, 'error']);
         Route::post('/webhook', [PaymentController::class, 'webhook']);
@@ -56,10 +56,10 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('auth')->group(function () {
-        Route::post('/request-otp', [AuthController::class, 'requestOtp']);
-        Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+        Route::post('/request-otp', [AuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
+        Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
 
-        Route::middleware('auth:customer')->group(function () {
+        Route::middleware(['auth:customer', 'customer.active'])->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::patch('/profile', [AuthController::class, 'updateProfile']);
@@ -70,7 +70,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::middleware('auth:customer')->prefix('me')->group(function () {
+    Route::middleware(['auth:customer', 'customer.active'])->prefix('me')->group(function () {
         // Push device registration (FCM tokens)
         Route::post('/devices', [CustomerDeviceController::class, 'store']);
         Route::delete('/devices', [CustomerDeviceController::class, 'destroy']);
@@ -93,7 +93,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/addresses/{address}', [SavedAddressController::class, 'destroy']);
 
         // Promo codes
-        Route::post('/promo/preview', [PromoCodeController::class, 'preview']);
+        Route::post('/promo/preview', [PromoCodeController::class, 'preview'])->middleware('throttle:sensitive');
 
         // Help center tickets (complaints, suggestions, inquiries)
         Route::get('/support/tickets', [SupportTicketController::class, 'index']);
@@ -102,7 +102,7 @@ Route::prefix('v1')->group(function () {
 
         // Wallet
         Route::get('/wallet', [WalletController::class, 'show']);
-        Route::post('/wallet/topup', [WalletController::class, 'topUp']);
+        Route::post('/wallet/topup', [WalletController::class, 'topUp'])->middleware('throttle:sensitive');
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
@@ -124,8 +124,8 @@ Route::prefix('v1')->group(function () {
     // --- Worker (staff) app -------------------------------------------------
     Route::prefix('worker')->group(function () {
         Route::prefix('auth')->group(function () {
-            Route::post('/request-otp', [WorkerAuthController::class, 'requestOtp']);
-            Route::post('/verify-otp', [WorkerAuthController::class, 'verifyOtp']);
+            Route::post('/request-otp', [WorkerAuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
+            Route::post('/verify-otp', [WorkerAuthController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
 
             Route::middleware('auth:worker')->group(function () {
                 Route::get('/me', [WorkerAuthController::class, 'me']);

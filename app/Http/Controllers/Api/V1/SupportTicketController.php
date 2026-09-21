@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PlainText;
 use App\Http\Resources\Api\V1\SupportTicketResource;
 use App\Models\Appointment;
 use App\Models\SupportTicket;
@@ -25,9 +26,9 @@ class SupportTicketController extends Controller
     {
         $data = $request->validate([
             'type' => ['required', Rule::in(SupportTicket::TYPES)],
-            'subject' => ['required', 'string', 'max:160'],
-            'message' => ['required', 'string', 'max:4000'],
-            'appointment_id' => ['nullable', 'integer'],
+            'subject' => ['required', 'string', 'min:3', 'max:160', new PlainText],
+            'message' => ['required', 'string', 'min:5', 'max:4000', new PlainText],
+            'appointment_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $appointmentId = null;

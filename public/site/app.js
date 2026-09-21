@@ -536,7 +536,7 @@
             V.api('me/addresses', { body: { label: self.addressLabel.trim(), subtitle: self.label || null, lat: self.lat, lng: self.lng, is_covered: true, icon_key: 'place' } }).catch(function () {});
           }
           if (pay.payment_page_url) {
-            document.cookie = 'velto_web_pay=booking:' + appt.id + '; path=/; max-age=1800; SameSite=Lax';
+            document.cookie = 'velto_web_pay=booking:' + appt.id + '; path=/; max-age=1800; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
             window.location.href = pay.payment_page_url; return;
           }
           window.location.href = '/book/done?status=success&kind=booking&appointment=' + appt.id;
@@ -575,7 +575,7 @@
   }
   /** Start a hosted card payment: remember where to come back, then go to the bank. */
   function goPay(kind, id, url) {
-    document.cookie = 'velto_web_pay=' + kind + ':' + (id || 0) + '; path=/; max-age=1800; SameSite=Lax';
+    document.cookie = 'velto_web_pay=' + kind + ':' + (id || 0) + '; path=/; max-age=1800; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
     window.location.href = url;
   }
 

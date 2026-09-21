@@ -9,7 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Models\Customer;
 use App\Models\CustomerNotification;
-use App\Services\JawalySMSService;
+use App\Services\Auth\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +20,7 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly JawalySMSService $sms) {}
+    public function __construct(private readonly OtpService $otp) {}
 
     /** POST /api/v1/auth/request-otp */
     public function requestOtp(Request $request): JsonResponse
@@ -31,85 +31,19 @@ class AuthController extends Controller
 
         $phone = SaudiPhone::normalize($data['phone']);
 
-        // Allowlisted numbers are resolved first so the throttle can skip
-        // them: no SMS is sent, so there is nothing to rate-limit, and an App
-        // Store reviewer moving between the customer and worker apps shares
-        // one phone_otps throttle and would otherwise be locked out for a
-        // minute.
-        $isTestPhone = in_array($phone, (array) config('services.otp.test_phones', []), true);
-
-        // Throttle: max 1 OTP request per phone per 60 seconds.
-        $recent = $isTestPhone ? null : DB::table('phone_otps')
-            ->where('phone', $phone)
-            ->where('created_at', '>=', now()->subSeconds(60))
-            ->orderByDesc('id')
-            ->first();
-
-        if ($recent) {
-            $elapsed = now()->getTimestamp() - \Carbon\Carbon::parse($recent->created_at)->getTimestamp();
-            $retryAfter = max(1, 60 - $elapsed);
-
-            return response()->json([
-                'message' => 'Please wait before requesting another code.',
-                'errors' => ['phone' => ["Try again in {$retryAfter}s."]],
-            ], 429)->header('Retry-After', (string) $retryAfter);
+        // A blocked number learns nothing here: same response, no SMS.
+        if (Customer::where('phone', $phone)->where('status', 'blocked')->exists()) {
+            return response()->json(['data' => ['phone' => $phone, 'expires_in' => OtpService::LIFETIME_MINUTES * 60, 'dev_code' => null]]);
         }
 
-        $smsConfigured = $this->sms->isConfigured();
-
-        // A real code, generated per request. This was previously the fixed
-        // string '1234' whenever SMS was configured, which meant anyone who
-        // knew a phone number could sign in as that account without ever
-        // receiving a message.
-        //
-        // random_int is the cryptographic generator; rand()/mt_rand() are
-        // predictable from a handful of observed codes.
-        //
-        // The 1111 backdoor stays, but ONLY when SMS is not configured — that
-        // is local development, where no message can arrive.
-        // An allowlisted test number gets a known code and no SMS attempt:
-        // review accounts and QA handsets cannot receive a real message.
-        $code = match (true) {
-            $isTestPhone => (string) config('services.otp.test_code', '1234'),
-            $smsConfigured => str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT),
-            default => '1111',
-        };
-
-        DB::table('phone_otps')->insert([
-            'phone' => $phone,
-            'code' => $code,
-            'expires_at' => now()->addMinutes(10),
-            'attempts' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        if ($smsConfigured && ! $isTestPhone) {
-            $result = $this->sms->sendOtp($phone, $code);
-            if (! ($result['success'] ?? false)) {
-                Log::warning('OTP SMS send failed', ['phone' => $phone, 'result' => $result]);
-
-                // Undo the row: leaving it behind would strand a code nobody
-                // received AND hold the 60s throttle against a customer who
-                // never got a message, so they could not even retry.
-                DB::table('phone_otps')->where('phone', $phone)->where('code', $code)->delete();
-
-                return response()->json([
-                    'message' => 'Could not send the code. Please try again.',
-                    'errors' => ['phone' => ['SMS provider error.']],
-                    'code' => 'sms_send_failed',
-                ], 502);
-            }
-        } else {
-            Log::info('OTP (local backdoor — SMS not configured)', ['phone' => $phone, 'code' => $code]);
-        }
+        $devCode = $this->otp->issue($phone, 'customer');
 
         return response()->json([
             'data' => [
                 'phone' => $phone,
-                'expires_in' => 600,
-                // Only echo back the code when SMS is offline (offline dev).
-                'dev_code' => $smsConfigured ? null : $code,
+                'expires_in' => OtpService::LIFETIME_MINUTES * 60,
+                // Only echoed when SMS is offline (local development).
+                'dev_code' => $devCode,
             ],
         ]);
     }
@@ -119,29 +53,18 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:32', new SaudiMobile],
-            'code' => ['required', 'string', 'size:4'],
+            'code' => ['required', 'string', 'digits:4'],
         ]);
 
         $phone = SaudiPhone::normalize($data['phone']);
 
-        $otp = DB::table('phone_otps')
-            ->where('phone', $phone)
-            ->whereNull('used_at')
-            ->where('expires_at', '>', now())
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $otp || $otp->code !== $data['code']) {
+        if (! $this->otp->verify($phone, $data['code'])) {
             return response()->json([
                 'message' => 'Invalid or expired code.',
                 'errors' => ['code' => ['Invalid or expired code.']],
+                'code' => 'invalid_code',
             ], 422);
         }
-
-        DB::table('phone_otps')->where('id', $otp->id)->update([
-            'used_at' => now(),
-            'updated_at' => now(),
-        ]);
 
         $customer = Customer::firstOrCreate(
             ['phone' => $phone],
@@ -154,7 +77,22 @@ class AuthController extends Controller
             ],
         );
 
-        $token = $customer->createToken('mobile')->plainTextToken;
+        if ($customer->status === 'blocked') {
+            return response()->json([
+                'message' => 'This account has been suspended. Please contact support.',
+                'code' => 'account_blocked',
+            ], 403);
+        }
+
+        // One token per sign-in, named after the client so the panel can tell
+        // web from app sessions; keep only the newest few so a lost phone's
+        // tokens age out rather than living forever.
+        $client = str_contains((string) $request->userAgent(), 'Mozilla') ? 'web' : 'mobile';
+        $token = $customer->createToken($client, ['*'], now()->addDays(180))->plainTextToken;
+        $stale = $customer->tokens()->orderByDesc('id')->skip(10)->take(100)->pluck('id');
+        if ($stale->isNotEmpty()) {
+            $customer->tokens()->whereIn('id', $stale)->delete();
+        }
 
         return response()->json([
             'data' => [
@@ -204,18 +142,32 @@ class AuthController extends Controller
         $customer = $request->user();
 
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            // Letters (any script), spaces and the handful of name punctuation
+            // marks — no digits, no markup, no control characters.
+            'name' => ['sometimes', 'string', 'min:2', 'max:60', 'regex:/^[\p{L}\p{M}\s\'\-\.]+$/u'],
             'email' => [
                 'sometimes',
                 'nullable',
-                'email',
+                'email:rfc',
+                'max:255',
                 Rule::unique('customers', 'email')->ignore($customer->id),
             ],
-            'city' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'area' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:100', 'regex:/^[\p{L}\p{M}\s\-]+$/u'],
+            'area' => ['sometimes', 'nullable', 'string', 'max:100', 'regex:/^[\p{L}\p{M}\p{N}\s\-]+$/u'],
             'gender' => ['sometimes', 'nullable', 'in:male,female'],
             'preferred_language' => ['sometimes', 'string', 'in:ar,en'],
+        ], [
+            'name.regex' => 'The name may only contain letters.',
         ]);
+
+        foreach (['name', 'city', 'area'] as $field) {
+            if (isset($data[$field]) && is_string($data[$field])) {
+                $data[$field] = trim(preg_replace('/\s+/u', ' ', $data[$field]));
+            }
+        }
+        if (isset($data['email']) && is_string($data['email'])) {
+            $data['email'] = mb_strtolower(trim($data['email']));
+        }
 
         $customer->fill($data);
 

@@ -41,7 +41,7 @@ class WalletController extends Controller
     public function topUp(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1', 'max:5000'],
+            'amount' => ['required', 'integer', 'min:10', 'max:5000'],
             'payment_method' => ['nullable', 'string', 'in:card,apple_pay'],
         ]);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PlainText;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\AppointmentReview;
@@ -67,20 +68,21 @@ class AppointmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'vehicle_id' => ['required', 'integer'],
-            'wash_package_id' => ['required', 'integer'],
-            'time_slot_id' => ['required', 'integer'],
-            'add_on_ids' => ['nullable', 'array'],
-            'add_on_ids.*' => ['integer'],
+            'vehicle_id' => ['required', 'integer', 'min:1'],
+            'wash_package_id' => ['required', 'integer', 'min:1'],
+            'time_slot_id' => ['required', 'integer', 'min:1'],
+            'add_on_ids' => ['nullable', 'array', 'max:20'],
+            'add_on_ids.*' => ['integer', 'min:1', 'distinct'],
             'payment_method' => ['required', 'string', 'in:wallet,card,apple_pay,package'],
-            'customer_package_id' => ['nullable', 'integer'],
+            'customer_package_id' => ['nullable', 'integer', 'min:1', 'required_if:payment_method,package'],
             'addons_payment_method' => ['nullable', 'string', 'in:wallet,card,apple_pay'],
-            'promo_code' => ['nullable', 'string', 'max:40'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'promo_code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'notes' => ['nullable', 'string', 'max:1000', new PlainText],
             'location' => ['nullable', 'array'],
-            'location.label' => ['nullable', 'string', 'max:255'],
-            'location.lat' => ['nullable', 'numeric'],
-            'location.lng' => ['nullable', 'numeric'],
+            'location.label' => ['nullable', 'string', 'max:255', new PlainText],
+            // Saudi Arabia only: anything outside its bounding box is a bogus pin.
+            'location.lat' => ['nullable', 'numeric', 'between:16,33', 'required_with:location.lng'],
+            'location.lng' => ['nullable', 'numeric', 'between:34,56', 'required_with:location.lat'],
             'location.area_id' => ['nullable', 'integer', 'exists:areas,id'],
             'location.zone_id' => ['nullable', 'integer', 'exists:zones,id'],
         ]);
@@ -242,7 +244,7 @@ class AppointmentController extends Controller
 
         $data = $request->validate([
             'rating' => ['required', 'integer', 'min:'.AppointmentReview::MIN_RATING, 'max:'.AppointmentReview::MAX_RATING],
-            'comment' => ['nullable', 'string', 'max:1000'],
+            'comment' => ['nullable', 'string', 'max:1000', new PlainText],
         ]);
 
         if ($appointment->status !== Appointment::STATUS_COMPLETED) {

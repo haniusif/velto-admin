@@ -8,7 +8,11 @@ use BezhanSalleh\LanguageSwitch\Enums\Placement;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View;
 
@@ -28,6 +32,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
+        $this->configureRateLimiting();
+
         // WorkerAssigned → SendWorkerAssignedNotification is auto-discovered by
         // Laravel's listener discovery (app/Listeners); no manual binding needed.
 
@@ -267,5 +277,29 @@ class AppServiceProvider extends ServiceProvider
                 </aside>
             HTML,
         );
+    }
+
+    /**
+     * Abuse budgets. The auth limits are per IP *and* per phone (the phone
+     * caps live in OtpService), so neither a single attacker nor a botnet
+     * aimed at one number gets far.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('api', fn (Request $r) => Limit::perMinute(120)->by($r->user()?->getAuthIdentifier() ?: $r->ip()));
+
+        RateLimiter::for('otp-request', fn (Request $r) => [
+            Limit::perMinute(5)->by('otp-req:ip:'.$r->ip()),
+            Limit::perHour(30)->by('otp-req:ip:h:'.$r->ip()),
+        ]);
+
+        RateLimiter::for('otp-verify', fn (Request $r) => [
+            Limit::perMinute(10)->by('otp-ver:ip:'.$r->ip()),
+            Limit::perMinute(6)->by('otp-ver:phone:'.preg_replace('/\D+/', '', (string) $r->input('phone'))),
+        ]);
+
+        RateLimiter::for('sensitive', fn (Request $r) => Limit::perMinute(20)->by('sens:'.($r->user()?->getAuthIdentifier() ?: $r->ip())));
+
+        RateLimiter::for('webhook', fn (Request $r) => Limit::perMinute(60)->by('hook:'.$r->ip()));
     }
 }

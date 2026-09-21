@@ -12,7 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // Every API call is metered per user (or IP); tighter limits sit on
+        // the auth routes themselves.
+        $middleware->api(append: [
+            'throttle:api',
+        ]);
+        $middleware->alias([
+            'customer.active' => \App\Http\Middleware\EnsureCustomerActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
