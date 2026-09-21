@@ -8,6 +8,7 @@ use App\Services\ARB\ArbGateway;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Payments\PaymentSettler;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
@@ -64,10 +65,27 @@ class PaymentController extends Controller
         return response()->json(['received' => true]);
     }
 
-    /** Terminal page the in-app WebView detects to close and refresh. */
-    public function done(Request $request): Response
+    /**
+     * Terminal page the in-app WebView detects to close and refresh.
+     *
+     * When the payment was started from the website, the site sets a
+     * `velto_web_pay` cookie (same domain) before sending the browser to the
+     * bank; here that cookie routes the customer back to the site's result
+     * page instead of the app-oriented stub.
+     */
+    public function done(Request $request): Response|RedirectResponse
     {
         $status = $request->query('status', 'unknown');
+
+        if ($web = $request->cookie('velto_web_pay')) {
+            [$kind, $id] = array_pad(explode(':', (string) $web, 2), 2, '');
+
+            return redirect('/book/done?'.http_build_query([
+                'status' => $status,
+                'kind' => in_array($kind, ['booking', 'plan', 'wallet'], true) ? $kind : 'booking',
+                'appointment' => (int) $id,
+            ]))->withoutCookie('velto_web_pay');
+        }
 
         return response(
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>Payment {$status}</title></head>".

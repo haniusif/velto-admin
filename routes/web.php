@@ -1,11 +1,24 @@
 <?php
 
+use App\Http\Controllers\Site\SiteController;
+
 use App\Models\AppSetting;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [SiteController::class, 'home'])->name('site.home');
+Route::get('/services', [SiteController::class, 'services'])->name('site.services');
+Route::get('/plans', [SiteController::class, 'plans'])->name('site.plans');
+Route::get('/faq', [SiteController::class, 'faq'])->name('site.faq');
+Route::get('/coverage', [SiteController::class, 'coverage'])->name('site.coverage');
+Route::get('/terms', fn () => app(SiteController::class)->legal('terms'))->name('site.terms');
+Route::get('/privacy', fn () => app(SiteController::class)->legal('privacy'))->name('site.privacy');
+Route::get('/login', [SiteController::class, 'login'])->name('site.login');
+Route::get('/complete-profile', [SiteController::class, 'completeProfile'])->name('site.complete-profile');
+Route::get('/book', [SiteController::class, 'book'])->name('site.book');
+Route::get('/book/done', [SiteController::class, 'bookDone'])->name('site.book.done');
+Route::get('/account/{section?}/{id?}', [SiteController::class, 'account'])
+    ->where('section', 'bookings|vehicles|wallet|plans|profile|support|notifications')
+    ->name('site.account');
 
 /**
  * Public account-deletion page.
