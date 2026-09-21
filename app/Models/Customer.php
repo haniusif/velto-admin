@@ -73,6 +73,11 @@ class Customer extends Authenticatable
         return $this->hasMany(CustomerDevice::class);
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
     /** @return array<int,string> Non-empty FCM tokens across this customer's devices. */
     public function deviceTokens(): array
     {

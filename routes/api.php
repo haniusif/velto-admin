@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CustomerDeviceController;
 use App\Http\Controllers\Api\V1\CustomerPackageController;
 use App\Http\Controllers\Api\V1\PromoCodeController;
 use App\Http\Controllers\Api\V1\SavedAddressController;
+use App\Http\Controllers\Api\V1\SupportTicketController;
 use App\Http\Controllers\Api\V1\WorkerLocationController;
 use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\LocationsController;
@@ -93,6 +94,11 @@ Route::prefix('v1')->group(function () {
 
         // Promo codes
         Route::post('/promo/preview', [PromoCodeController::class, 'preview']);
+
+        // Help center tickets (complaints, suggestions, inquiries)
+        Route::get('/support/tickets', [SupportTicketController::class, 'index']);
+        Route::post('/support/tickets', [SupportTicketController::class, 'store']);
+        Route::get('/support/tickets/{ticket}', [SupportTicketController::class, 'show']);
 
         // Wallet
         Route::get('/wallet', [WalletController::class, 'show']);

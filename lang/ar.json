@@ -523,5 +523,20 @@
     "All covered": "الكل مُسند",
     "Nothing under way": "لا توجد مهمة جارية",
     "SAR": "ر.س",
-    "Abandoned": "متروكة"
+    "Abandoned": "متروكة",
+    "Support tickets": "تذاكر الدعم",
+    "Support ticket": "تذكرة دعم",
+    "Complaint": "شكوى",
+    "Suggestion": "اقتراح",
+    "Inquiry": "استفسار",
+    "Other": "أخرى",
+    "Resolved": "تم الحل",
+    "Closed": "مغلقة",
+    "From the customer": "من العميل",
+    "Subject": "الموضوع",
+    "Reply": "الرد",
+    "Reply to customer": "الرد على العميل",
+    "Sent to the customer as a notification when saved.": "يُرسل للعميل كإشعار عند الحفظ.",
+    "Reply / update": "رد / تحديث",
+    "Replied at": "وقت الرد"
 }

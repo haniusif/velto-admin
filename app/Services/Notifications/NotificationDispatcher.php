@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\AssignmentOffer;
 use App\Models\Customer;
 use App\Models\CustomerNotification;
+use App\Models\SupportTicket;
 use App\Models\Worker;
 use App\Models\WorkerNotification;
 use App\Support\BookingTime;
@@ -136,6 +137,15 @@ class NotificationDispatcher
         }
 
         return $sent;
+    }
+
+    /** The team answered a Help Center ticket from the panel. */
+    public function supportTicketReplied(SupportTicket $ticket): void
+    {
+        $this->toCustomer($ticket->customer_id, CustomerNotification::KIND_SUPPORT_REPLY,
+            'Support replied to your request', 'رد الدعم على طلبك',
+            $ticket->subject, $ticket->subject,
+            ['ticket_id' => $ticket->id]);
     }
 
     /**

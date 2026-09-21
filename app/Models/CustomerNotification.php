@@ -31,6 +31,7 @@ class CustomerNotification extends Model
     public const KIND_ARRIVED = 'arrived';
     public const KIND_COMPLETED = 'completed';
     public const KIND_PROMO = 'promo';
+    public const KIND_SUPPORT_REPLY = 'support_reply';
 
     public function customer(): BelongsTo
     {
