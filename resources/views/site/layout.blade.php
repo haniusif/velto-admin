@@ -12,6 +12,8 @@
 <title>{{ isset($title) ? $title.' · ' : '' }}Velto · فيلتو — الخيار الذكي لغسيل سيارتك</title>
 <meta name="description" content="{{ $description ?? 'فيلتو — خدمة عناية بالسيارات متنقلة. نصلك أينما كنت في الرياض. تجربة شخصية وجودة تفوق توقعاتك.' }}">
 <meta name="theme-color" content="#8863E5">
+{{-- Also as a meta tag: the hosting layer replaces the CSP *header* with its own. --}}
+<meta http-equiv="Content-Security-Policy" content="{{ \App\Http\Middleware\SecurityHeaders::SITE_CSP }}">
 <link rel="icon" href="/img/logo-velto.png">
 <link rel="stylesheet" href="/site/site.css?v={{ filemtime(public_path('site/site.css')) }}">
 <script>
