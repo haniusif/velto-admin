@@ -68,19 +68,39 @@ class PushSender
 
         $url = "https://fcm.googleapis.com/v1/projects/{$config['project']}/messages:send";
 
+        $delivered = 0;
+        $failures = [];
+
         foreach ($tokens as $token) {
-            $this->sendOne($url, $accessToken, $token, $title, $body, $data, $config, $audience);
+            $status = $this->sendOne($url, $accessToken, $token, $title, $body, $data, $config, $audience);
+
+            if ($status === null) {
+                $delivered++;
+            } else {
+                $failures[$status] = ($failures[$status] ?? 0) + 1;
+            }
         }
+
+        // One line per batch, always — without it the log cannot tell "every
+        // device accepted" from "nothing was ever sent", which is exactly the
+        // question asked when someone reports a missing notification.
+        Log::info('[push] batch', [
+            'audience' => $audience,
+            'delivered' => $delivered,
+            'failed' => array_sum($failures),
+            'statuses' => $failures ?: null,
+        ]);
     }
 
     /**
      * @param  array<string,mixed>  $data
      * @param  array<string,mixed>  $config
      */
+    /** @return string|null the FCM error status, or null when the device accepted it */
     private function sendOne(
         string $url, string $accessToken, string $token,
         string $title, string $body, array $data, array $config, string $audience,
-    ): void {
+    ): ?string {
         try {
             $response = Http::withToken($accessToken)
                 ->acceptJson()
@@ -105,16 +125,22 @@ class PushSender
                 ]);
 
             if ($response->failed()) {
-                $status = $response->json('error.status');
+                $status = (string) ($response->json('error.status') ?: 'UNKNOWN');
                 if ($this->isDeadToken($status, (string) $response->json('error.message'))) {
                     $this->pruneToken($audience, $token);
                 }
                 Log::warning('[push] send failed', [
                     'audience' => $audience, 'status' => $status, 'body' => $response->json(),
                 ]);
+
+                return $status;
             }
+
+            return null;
         } catch (\Throwable $e) {
             Log::warning('[push] send error', ['audience' => $audience, 'error' => $e->getMessage()]);
+
+            return 'EXCEPTION';
         }
     }
 
