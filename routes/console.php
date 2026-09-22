@@ -39,6 +39,21 @@ $scheduled = static fn (string $command): callable => static function () use ($c
 // Grace window is configurable in admin settings (booking.pending_grace_minutes).
 Schedule::call($scheduled('bookings:cancel-stale'))->name('bookings-cancel-stale')->everyFiveMinutes();
 
+// Drain the database queue.
+//
+// Nothing consumed it before this: there is no `queue:work` daemon (proc_open
+// is disabled, so nothing can supervise one), while QUEUE_CONNECTION is
+// `database`. Every confirmed booking enqueued a RunDispatch job that was
+// never once attempted — 72 rows had accumulated since July, and any future
+// ShouldQueue work would have vanished just as quietly. Bookings still got a
+// worker only because dispatch:sweep below re-does the same work.
+//
+// Bounded to well inside the tick so a slow job cannot overlap the next one.
+Schedule::call($scheduled('queue:work --stop-when-empty --max-time=45 --tries=3'))
+    ->name('queue-work')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 // Dispatch backstop: expire stale offers, retry the waiting-assignment queue.
 // A closure has no name to derive a mutex from, so withoutOverlapping()
 // needs one given explicitly — otherwise it throws at schedule time.
