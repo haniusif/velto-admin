@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\BookingTime;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -39,6 +40,23 @@ class PromoCode extends Model
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * `min_order_total` and `per_customer_limit` are NOT NULL with a database
+     * default, which only applies when the column is left out of the INSERT.
+     * A cleared field in the admin form sends an explicit null instead, and
+     * MySQL rejects the whole row — three attempts to save a promo code died
+     * that way before these mutators existed. Treat "blank" as the default.
+     */
+    protected function minOrderTotal(): Attribute
+    {
+        return Attribute::set(fn ($value) => $value === null || $value === '' ? 0 : $value);
+    }
+
+    protected function perCustomerLimit(): Attribute
+    {
+        return Attribute::set(fn ($value) => $value === null || $value === '' ? 1 : $value);
+    }
 
     public function redemptions(): HasMany
     {

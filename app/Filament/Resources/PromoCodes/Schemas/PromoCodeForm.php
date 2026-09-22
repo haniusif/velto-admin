@@ -79,7 +79,9 @@ class PromoCodeForm
 
                         TextInput::make('min_order_total')
                             ->label(__('Minimum order'))
+                            ->helperText(__('Leave empty for no minimum.'))
                             ->numeric()
+                            ->minValue(0)
                             ->default(0)
                             ->suffix('SAR'),
                     ]),
