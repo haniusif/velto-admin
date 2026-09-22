@@ -540,5 +540,16 @@
     "Reply / update": "رد / تحديث",
     "Replied at": "وقت الرد",
     "2:1 landscape, e.g. 1600×800. Anything else is cropped to fit.": "صورة عرضية بنسبة 2:1، مثلاً 1600×800. أي مقاس آخر يُقص ليناسب.",
-    "Leave empty for no minimum.": "اتركه فارغاً بدون حد أدنى."
+    "Leave empty for no minimum.": "اتركه فارغاً بدون حد أدنى.",
+    "max": "حد أقصى",
+    "Description (AR)": "الوصف (عربي)",
+    "Usage": "الاستخدام",
+    "Times used": "مرات الاستخدام",
+    "Window": "فترة الصلاحية",
+    "Customers who used this code": "العملاء الذين استخدموا هذا الكود",
+    "Booking deleted": "الحجز محذوف",
+    "Booking status": "حالة الحجز",
+    "Booking total": "إجمالي الحجز",
+    "Not used yet": "لم يُستخدم بعد",
+    "Redemptions appear here as customers book with this code.": "تظهر هنا كل عملية استخدام عند حجز العملاء بهذا الكود."
 }

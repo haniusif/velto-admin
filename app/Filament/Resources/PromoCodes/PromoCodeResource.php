@@ -5,6 +5,9 @@ namespace App\Filament\Resources\PromoCodes;
 use App\Filament\Resources\PromoCodes\Pages\CreatePromoCode;
 use App\Filament\Resources\PromoCodes\Pages\EditPromoCode;
 use App\Filament\Resources\PromoCodes\Pages\ListPromoCodes;
+use App\Filament\Resources\PromoCodes\Pages\ViewPromoCode;
+use App\Filament\Resources\PromoCodes\RelationManagers\RedemptionsRelationManager;
+use App\Filament\Resources\PromoCodes\Schemas\PromoCodeInfolist;
 use App\Filament\Resources\PromoCodes\Schemas\PromoCodeForm;
 use App\Filament\Resources\PromoCodes\Tables\PromoCodesTable;
 use App\Models\PromoCode;
@@ -49,9 +52,19 @@ class PromoCodeResource extends Resource
         return PromoCodeForm::configure($schema);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return PromoCodeInfolist::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return PromoCodesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [RedemptionsRelationManager::class];
     }
 
     public static function getPages(): array
@@ -59,6 +72,7 @@ class PromoCodeResource extends Resource
         return [
             'index' => ListPromoCodes::route('/'),
             'create' => CreatePromoCode::route('/create'),
+            'view' => ViewPromoCode::route('/{record}'),
             'edit' => EditPromoCode::route('/{record}/edit'),
         ];
     }
