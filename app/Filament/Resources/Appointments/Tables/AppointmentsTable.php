@@ -23,10 +23,12 @@ use Illuminate\Support\Facades\DB;
 
 class AppointmentsTable
 {
-    private const STATUS_COLORS = [
+    public const STATUS_COLORS = [
         'pending' => 'gray',
         'confirmed' => 'info',
         'on_the_way' => 'warning',
+        'arrived' => 'warning',
+        'in_progress' => 'primary',
         'completed' => 'success',
         'cancelled' => 'danger',
     ];
@@ -143,7 +145,7 @@ class AppointmentsTable
     }
 
     /** Row action: pick the best eligible worker for this one job. */
-    private static function autoAssignAction(): Action
+    public static function autoAssignAction(): Action
     {
         return Action::make('autoAssign')
             ->label(__('Auto-assign'))
@@ -224,7 +226,7 @@ class AppointmentsTable
     }
 
     /** Cancel an order: free its time slot and refund a wallet-paid booking. */
-    private static function cancelAction(): Action
+    public static function cancelAction(): Action
     {
         return Action::make('cancel')
             ->label(__('Cancel order'))

@@ -551,5 +551,17 @@
     "Booking status": "حالة الحجز",
     "Booking total": "إجمالي الحجز",
     "Not used yet": "لم يُستخدم بعد",
-    "Redemptions appear here as customers book with this code.": "تظهر هنا كل عملية استخدام عند حجز العملاء بهذا الكود."
+    "Redemptions appear here as customers book with this code.": "تظهر هنا كل عملية استخدام عند حجز العملاء بهذا الكود.",
+    "People": "الأشخاص",
+    "Dispatch": "التوزيع",
+    "Work started": "بدء العمل",
+    "Accepted": "تم القبول",
+    "Arrived": "وصل",
+    "In Progress": "قيد التنفيذ",
+    "On The Way": "في الطريق",
+    "No add-ons": "لا توجد إضافات",
+    "No notes": "لا توجد ملاحظات",
+    "Auto assigning": "جارٍ التعيين التلقائي",
+    "Apple pay": "Apple Pay",
+    "Order #:id": "الطلب #:id"
 }

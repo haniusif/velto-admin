@@ -120,17 +120,17 @@
             },
         }"
         x-init="boot()"
-        class="space-y-3"
+        class="vm-map"
     >
-        <div class="relative h-80 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
-            <div x-ref="canvas" class="h-full w-full"></div>
+        <div class="vm-map__frame">
+            <div x-ref="canvas" class="vm-map__fill"></div>
 
             @if ($staticMap)
                 <a
                     href="{{ $googleUrl }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="absolute inset-0"
+                    class="vm-map__cover"
                     x-show="! live && ! pictureFailed"
                 >
                     <img
@@ -138,7 +138,8 @@
                         alt="{{ __('Booking location') }}"
                         loading="lazy"
                         referrerpolicy="strict-origin-when-cross-origin"
-                        class="h-full w-full object-cover"
+                        class="vm-map__fill"
+                        style="object-fit: cover"
                         x-on:error="pictureFailed = true"
                     />
                 </a>
@@ -148,63 +149,56 @@
                  so and keep the location reachable, rather than leaving an
                  empty frame or a broken-image icon. --}}
             <div
-                class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-50 p-4 text-center text-sm text-gray-500 dark:bg-white/5 dark:text-gray-400"
+                class="vm-map__cover vm-map__empty"
                 x-show="! live @if ($staticMap) && pictureFailed @endif"
                 x-cloak
             >
                 <span>{{ __('Map could not be loaded') }}</span>
-                <a
-                    href="{{ $googleUrl }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="font-medium text-primary-600 underline dark:text-primary-400"
-                >{{ $coords }}</a>
+                <a href="{{ $googleUrl }}" target="_blank" rel="noopener noreferrer" class="vm-map__link">{{ $coords }}</a>
             </div>
         </div>
 
         {{-- The map shows where. These hand it to a phone, which is what
              dispatch actually needs once they have looked. --}}
-        <div class="flex flex-wrap items-center gap-2">
-            <a
-                href="{{ $googleUrl }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-500"
-            >
+        <div class="vm-map__actions">
+            <x-filament::button tag="a" :href="$googleUrl" target="_blank" rel="noopener noreferrer" icon="heroicon-m-map" size="sm">
                 {{ __('Open in Google Maps') }}
-            </a>
+            </x-filament::button>
 
-            <a
-                href="{{ $directionsUrl }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-white/20 dark:text-gray-200 dark:hover:bg-white/5"
-            >
+            <x-filament::button tag="a" :href="$directionsUrl" target="_blank" rel="noopener noreferrer" icon="heroicon-m-arrow-top-right-on-square" color="gray" outlined size="sm">
                 {{ __('Directions') }}
-            </a>
+            </x-filament::button>
 
-            <button
-                type="button"
-                x-on:click="copy()"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-white/20 dark:text-gray-200 dark:hover:bg-white/5"
-            >
+            <x-filament::button x-on:click="copy()" icon="heroicon-m-clipboard-document" color="gray" outlined size="sm">
                 <span x-show="! copied">{{ $coords }}</span>
-                <span x-show="copied" x-cloak class="text-success-600 dark:text-success-400">
-                    {{ __('Copied') }}
-                </span>
-            </button>
+                <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
+            </x-filament::button>
         </div>
     </div>
 @else
     {{-- Bookings taken before the app captured a pin, and admin-created ones,
          have no coordinates. Saying so beats a map of central Riyadh that
          looks like an answer. --}}
-    <div class="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">
+    <div class="vm-map__none">
         {{ __('No location recorded for this booking') }}
-        @if (filled($record->address_label))
-            <div class="mt-1 font-medium text-gray-700 dark:text-gray-200">
-                {{ $record->address_label }}
-            </div>
-        @endif
     </div>
 @endif
+
+{{-- The panel ships Filament's prebuilt stylesheet and no custom theme, so
+     utility classes written here never get compiled — the frame used to
+     collapse to zero height. Scoped plain CSS instead. --}}
+@once
+    <style>
+        .vm-map { display: flex; flex-direction: column; gap: .75rem; }
+        .vm-map__frame { position: relative; height: 20rem; overflow: hidden; border-radius: .75rem; border: 1px solid rgb(0 0 0 / .1); }
+        .vm-map__fill { width: 100%; height: 100%; display: block; }
+        .vm-map__cover { position: absolute; inset: 0; }
+        .vm-map__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; padding: 1rem; text-align: center; font-size: .875rem; color: rgb(107 114 128); background: rgb(249 250 251); }
+        .vm-map__link { font-weight: 500; text-decoration: underline; color: var(--primary-600); }
+        .vm-map__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+        .vm-map__none { border-radius: .75rem; border: 1px dashed rgb(209 213 219); padding: 1.25rem; text-align: center; font-size: .875rem; color: rgb(107 114 128); }
+        .dark .vm-map__frame { border-color: rgb(255 255 255 / .1); }
+        .dark .vm-map__empty { background: rgb(255 255 255 / .05); color: rgb(156 163 175); }
+        .dark .vm-map__none { border-color: rgb(255 255 255 / .15); color: rgb(156 163 175); }
+    </style>
+@endonce

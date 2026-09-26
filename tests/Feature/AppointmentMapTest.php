@@ -139,19 +139,21 @@ class AppointmentMapTest extends TestCase
             ->assertSee('loader.then', escape: false);
     }
 
-    public function test_the_map_comes_before_the_field_list(): void
+    public function test_the_map_sits_with_the_booking_not_below_the_history(): void
     {
-        // It previously sat eleventh among twenty-five fields, so it was on
-        // the page but not where anyone would look for it.
+        // It once sat eleventh among twenty-five fields. The page is now
+        // grouped — the booking, then where it is, then its timeline — so the
+        // map belongs in the main column above the timestamps and the money.
         $html = $this->openPage($this->booking(24.8112, 46.6103))->getContent();
 
         $map = strpos($html, 'x-ref="canvas"');
-        // A label that appears only in the field list, not in the page title.
-        $firstField = strpos($html, __('Wash package'));
+        $timeline = strpos($html, __('Timeline'));
+        $payment = strpos($html, __('Base price'));
 
         $this->assertNotFalse($map, 'the map is not on the page at all');
-        $this->assertNotFalse($firstField, 'the field list did not render');
-        $this->assertLessThan($firstField, $map, 'the map must precede the field list');
+        $this->assertNotFalse($timeline, 'the timeline did not render');
+        $this->assertLessThan($timeline, $map, 'the map must come before the timeline');
+        $this->assertLessThan($payment, $map, 'the map must come before the payment breakdown');
     }
 
     public function test_the_map_offers_a_way_to_actually_drive_there(): void
