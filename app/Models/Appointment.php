@@ -98,6 +98,11 @@ class Appointment extends Model
         // plan bookings all create appointments by different routes, and a
         // path that forgot to record the redemption would hand out an
         // unlimited code.
+        // Who did what, for the order's timeline. Hooked here, not in each
+        // controller, so no path that touches a booking can skip it.
+        static::created(fn (Appointment $appointment) => AppointmentActivity::recordCreated($appointment));
+        static::updated(fn (Appointment $appointment) => AppointmentActivity::recordUpdated($appointment));
+
         static::created(function (Appointment $appointment): void {
             if ($appointment->promo_code_id === null) {
                 return;

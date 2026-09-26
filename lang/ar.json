@@ -586,5 +586,15 @@
     "Admin manual": "تعيين يدوي من المشرف",
     "Admin bulk": "تعيين جماعي من المشرف",
     "Over capacity": "تجاوز السعة",
-    "Exhausted": "لا يوجد عمال متاحون"
+    "Exhausted": "لا يوجد عمال متاحون",
+    "Order edited": "تعديل الطلب",
+    "System": "النظام",
+    "Auto dispatch": "التوزيع التلقائي",
+    "Assignment locked": "التعيين مقفل",
+    "Yes": "نعم",
+    "No": "لا",
+    "payment gateway": "بوابة الدفع",
+    "Removed": "أُزيل",
+    "Unpaid booking auto-cancel": "الإلغاء التلقائي للطلبات غير المدفوعة",
+    "Background task": "مهمة خلفية"
 }

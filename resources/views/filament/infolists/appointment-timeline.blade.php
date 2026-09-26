@@ -22,6 +22,30 @@
                 @if (filled($event['detail']))
                     <div class="vt-timeline__detail">{{ $event['detail'] }}</div>
                 @endif
+
+                @if (filled($event['changes']))
+                    <dl class="vt-timeline__changes">
+                        @foreach ($event['changes'] as [$label, $old, $new])
+                            <div class="vt-timeline__change">
+                                <dt>{{ $label }}</dt>
+                                <dd>
+                                    @if ($old !== null)
+                                        <span class="vt-timeline__old">{{ $old }}</span>
+                                        <span class="vt-timeline__arrow" aria-hidden="true">→</span>
+                                    @endif
+                                    <span class="vt-timeline__new">{{ $new ?? __('Removed') }}</span>
+                                </dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                @endif
+
+                @if (filled($event['actor']))
+                    <div class="vt-timeline__actor">
+                        <x-filament::icon icon="heroicon-m-user-circle" class="vt-timeline__actor-icon" />
+                        {{ __('by :actor', ['actor' => $event['actor']]) }}
+                    </div>
+                @endif
             </div>
         </li>
     @endforeach
@@ -49,6 +73,19 @@
         .vt-timeline__title { font-size: .875rem; font-weight: 600; color: rgb(17 24 39); }
         .vt-timeline__time { font-size: .8125rem; color: rgb(107 114 128); font-variant-numeric: tabular-nums; }
         .vt-timeline__detail { margin-top: .125rem; font-size: .8125rem; color: rgb(75 85 99); overflow-wrap: anywhere; }
+        .vt-timeline__actor { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; font-size: .75rem; font-weight: 500; color: rgb(107 114 128); }
+        .vt-timeline__actor-icon { width: .875rem; height: .875rem; }
+        .vt-timeline__changes { margin: .375rem 0 0; padding: .5rem .625rem; border-radius: .5rem; background: rgb(249 250 251); border: 1px solid rgb(0 0 0 / .05); display: grid; gap: .25rem; font-size: .8125rem; }
+        .vt-timeline__change { display: flex; flex-wrap: wrap; gap: .25rem .5rem; }
+        .vt-timeline__change dt { color: rgb(107 114 128); min-width: 7rem; }
+        .vt-timeline__change dd { margin: 0; display: flex; flex-wrap: wrap; gap: .375rem; align-items: baseline; }
+        .vt-timeline__old { color: rgb(107 114 128); text-decoration: line-through; }
+        .vt-timeline__new { color: rgb(17 24 39); font-weight: 500; }
+        .vt-timeline__arrow { color: rgb(156 163 175); }
+        [dir=rtl] .vt-timeline__arrow { display: inline-block; transform: scaleX(-1); }
+        .dark .vt-timeline__changes { background: rgb(255 255 255 / .04); border-color: rgb(255 255 255 / .08); }
+        .dark .vt-timeline__new { color: rgb(243 244 246); }
+        .dark .vt-timeline__actor, .dark .vt-timeline__old, .dark .vt-timeline__change dt { color: rgb(156 163 175); }
         .vt-timeline__item--planned .vt-timeline__dot { background: transparent; box-shadow: 0 0 0 1.5px var(--vt-color) inset; }
         .dark .vt-timeline__item:not(:last-child)::before { background: rgb(255 255 255 / .1); }
         .dark .vt-timeline__title { color: rgb(243 244 246); }

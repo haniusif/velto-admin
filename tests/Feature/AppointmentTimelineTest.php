@@ -79,7 +79,7 @@ class AppointmentTimelineTest extends TestCase
             __('Booked'),
             __('Payment captured'),
             __('Worker assigned'),
-            __('On the way'),
+            __('On The Way'),
             __('Scheduled time'),
             __('Completed'),
         ], $titles);

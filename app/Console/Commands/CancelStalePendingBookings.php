@@ -30,14 +30,23 @@ class CancelStalePendingBookings extends Command
 
         $cutoff = now()->subMinutes($minutes);
 
-        $count = Appointment::query()
+        // One model at a time rather than a bulk UPDATE: the bulk form skips
+        // model events, so these cancellations never reached the order's
+        // change log and read as if nobody had cancelled them.
+        $stale = Appointment::query()
             ->where('status', Appointment::STATUS_PENDING)
             ->where('payment_status', 'pending')
             ->where('created_at', '<', $cutoff)
-            ->update([
+            ->get();
+
+        foreach ($stale as $appointment) {
+            $appointment->update([
                 'status' => Appointment::STATUS_CANCELLED,
                 'cancelled_at' => now(),
             ]);
+        }
+
+        $count = $stale->count();
 
         $this->info("Cancelled {$count} stale pending booking(s) older than {$minutes} min.");
 
