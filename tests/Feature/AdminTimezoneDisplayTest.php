@@ -114,8 +114,9 @@ class AdminTimezoneDisplayTest extends TestCase
         $html = $this->get(AppointmentResource::getUrl('view', ['record' => $this->booking()]))
             ->getContent();
 
-        $this->assertStringContainsString('Aug 29, 2026 22:00:00', $html, 'created_at was shifted');
-        $this->assertStringNotContainsString('Aug 30, 2026 01:00:00', $html, 'created_at was converted twice');
+        // Shown on the order's timeline as its "Booked" step.
+        $this->assertStringContainsString('29 Aug 2026, 22:00', $html, 'created_at was shifted');
+        $this->assertStringNotContainsString('30 Aug 2026, 01:00', $html, 'created_at was converted twice');
     }
 
     public function test_every_naive_column_in_the_panel_opts_out(): void

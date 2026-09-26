@@ -109,28 +109,17 @@ class AppointmentInfolist
 
     private static function timelineSection(): Section
     {
-        // Only the milestones that actually happened; a column of dashes for
-        // steps a cancelled booking never reached says nothing.
-        $step = fn (string $field, string $label, string $icon, string $color = 'gray') => TextEntry::make($field)
-            ->label($label)
-            ->dateTime()
-            ->icon($icon)
-            ->iconColor($color)
-            ->visible(fn (Appointment $r): bool => filled($r->{$field}));
-
+        // Status stamps, payments, dispatch decisions and the review on one
+        // rail, so "why was this late?" is answered without opening four
+        // screens and lining the times up by hand.
         return Section::make(__('Timeline'))
             ->icon('heroicon-o-clock')
-            ->columns(3)
             ->collapsible()
             ->components([
-                $step('created_at', __('Booked'), 'heroicon-o-plus-circle'),
-                $step('accepted_at', __('Accepted'), 'heroicon-o-hand-thumb-up', 'info'),
-                $step('started_at', __('On the way'), 'heroicon-o-truck', 'warning'),
-                $step('arrived_at', __('Arrived'), 'heroicon-o-map-pin', 'warning'),
-                $step('work_started_at', __('Work started'), 'heroicon-o-wrench-screwdriver', 'primary'),
-                $step('completed_at', __('Completed at'), 'heroicon-o-check-circle', 'success'),
-                $step('cancelled_at', __('Cancelled at'), 'heroicon-o-x-circle', 'danger'),
-                $step('updated_at', __('Updated'), 'heroicon-o-arrow-path'),
+                ViewEntry::make('timeline')
+                    ->hiddenLabel()
+                    ->view('filament.infolists.appointment-timeline')
+                    ->columnSpanFull(),
             ]);
     }
 
