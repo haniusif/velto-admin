@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Notifications\AdminAlerts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -71,7 +72,7 @@ class AppointmentActivity extends Model
     {
         [$type, $id, $name] = self::currentActor();
 
-        static::create([
+        $activity = static::create([
             'appointment_id' => $appointment->id,
             'event' => $event,
             'actor_type' => $type,
@@ -80,6 +81,9 @@ class AppointmentActivity extends Model
             'changes' => $changes,
             'created_at' => now(),
         ]);
+
+        // The log knows who did what, which is exactly what an alert says.
+        AdminAlerts::fromActivity($activity, $appointment);
     }
 
     /**

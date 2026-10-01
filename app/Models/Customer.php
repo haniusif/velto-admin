@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\NormalisesPhone;
+use App\Services\Notifications\AdminAlerts;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,6 +12,12 @@ use Laravel\Sanctum\HasApiTokens;
 class Customer extends Authenticatable
 {
     use HasApiTokens, NormalisesPhone, Notifiable;
+
+    protected static function booted(): void
+    {
+        // Every new account — app sign-up or added in the panel — tells the team.
+        static::created(fn (Customer $customer) => AdminAlerts::customerRegistered($customer));
+    }
 
     protected $fillable = [
         'name',

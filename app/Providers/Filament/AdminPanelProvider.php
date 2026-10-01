@@ -39,6 +39,10 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Velto Admin')
             ->font('Cairo', provider: LocalFontProvider::class)
             ->darkMode()
+            // The bell for admin alerts (new bookings, cancellations, worker
+            // progress). Polled: the host cannot run a websocket server.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

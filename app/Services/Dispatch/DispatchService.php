@@ -10,6 +10,8 @@ use App\Models\DispatchEvent;
 use App\Models\Worker;
 use App\Services\Dispatch\Strategies\AssignmentStrategy;
 use App\Services\Dispatch\Strategies\StrategyFactory;
+use App\Services\Notifications\AdminAlerts;
+use App\Services\Notifications\AdminAlertSettings;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Support\DispatchState;
 use Illuminate\Support\Facades\DB;
@@ -323,7 +325,17 @@ class DispatchService
 
     private function queueWaiting(Appointment $appointment, bool $escalate = false): void
     {
+        // The sweep retries waiting jobs every minute; alert on the way in
+        // and on giving up, not on every retry.
+        $justStarted = $appointment->dispatch_state !== DispatchState::WAITING;
+
         $appointment->update(['dispatch_state' => DispatchState::WAITING]);
+
+        if ($justStarted || $escalate) {
+            AdminAlerts::needsWorker($appointment, $escalate
+                ? __('Gave up after :n attempts', ['n' => $appointment->dispatch_attempts], app(AdminAlertSettings::class)->language())
+                : __('No eligible worker', [], app(AdminAlertSettings::class)->language()));
+        }
         DispatchEvent::record($appointment->id, DispatchEvent::TYPE_WAITING, reason: $escalate ? 'exhausted' : null);
 
         if ($escalate) {
