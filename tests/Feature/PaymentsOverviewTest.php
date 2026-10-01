@@ -97,6 +97,10 @@ class PaymentsOverviewTest extends TestCase
 
     public function test_captured_covers_this_month_only(): void
     {
+        // "Two days ago" is last month on the 1st; pin to mid-month so the
+        // fixture dates mean what the test says they mean.
+        $this->travelTo(now()->startOfMonth()->addDays(14)->setTime(12, 0));
+
         $this->transaction(PaymentTransaction::STATUS_CAPTURED, now()->subDays(2)->toDateTimeString(), 100);
         $this->transaction(PaymentTransaction::STATUS_CAPTURED, now()->subMonths(2)->toDateTimeString(), 999);
 
@@ -128,6 +132,10 @@ class PaymentsOverviewTest extends TestCase
 
     public function test_abandoned_and_failed_are_reported_for_the_month(): void
     {
+        // "Two days ago" is last month on the 1st; pin to mid-month so the
+        // fixture dates mean what the test says they mean.
+        $this->travelTo(now()->startOfMonth()->addDays(14)->setTime(12, 0));
+
         $this->transaction(PaymentTransaction::STATUS_PENDING, now()->subHours(4)->toDateTimeString());
         $this->transaction(PaymentTransaction::STATUS_PENDING, now()->subMonths(2)->toDateTimeString());
         $this->transaction(PaymentTransaction::STATUS_FAILED, now()->subDays(3)->toDateTimeString());
