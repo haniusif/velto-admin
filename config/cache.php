@@ -19,6 +19,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rate Limiter Store
+    |--------------------------------------------------------------------------
+    |
+    | Throttle counters live in files, not the database cache table. The app
+    | fires several requests at once on launch; each hit does an INSERT IGNORE
+    | on the same `cache` row, and under that burst MySQL deadlocked and 500'd
+    | the request (seen 2026-09-28). The file store's add() takes an exclusive
+    | flock, so the race serialises instead of deadlocking.
+    |
+    */
+
+    'limiter' => env('CACHE_LIMITER', 'file'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache Stores
     |--------------------------------------------------------------------------
     |
