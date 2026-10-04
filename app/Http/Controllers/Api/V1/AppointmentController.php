@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Rules\PlainText;
 use App\Http\Resources\Api\V1\AppointmentResource;
 use App\Models\Appointment;
+use App\Models\PromoCode;
 use App\Models\AppointmentReview;
 use App\Models\CustomerPackage;
 use App\Models\PaymentTransaction;
@@ -76,7 +77,7 @@ class AppointmentController extends Controller
             'payment_method' => ['required', 'string', 'in:wallet,card,apple_pay,package'],
             'customer_package_id' => ['nullable', 'integer', 'min:1', 'required_if:payment_method,package'],
             'addons_payment_method' => ['nullable', 'string', 'in:wallet,card,apple_pay'],
-            'promo_code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'promo_code' => ['nullable', 'string', 'max:40', 'regex:'.PromoCode::CODE_PATTERN],
             'notes' => ['nullable', 'string', 'max:1000', new PlainText],
             'location' => ['nullable', 'array'],
             'location.label' => ['nullable', 'string', 'max:255', new PlainText],

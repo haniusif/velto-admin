@@ -16,6 +16,13 @@ class PromoCode extends Model
     public const TYPE_FIXED = 'fixed';
 
     /** Why a code cannot be used — returned to the app so it can localize. */
+    /**
+     * What a typed code may look like: letters in any script, digits, _ and -.
+     * Was A-Za-z only, which silently rejected every Arabic code the team
+     * created in the panel (العويس got a validation error, never a lookup).
+     */
+    public const CODE_PATTERN = '/^[\p{L}\p{N}_-]+$/u';
+
     public const REASON_NOT_FOUND = 'promo_not_found';
     public const REASON_EXPIRED = 'promo_expired';
     public const REASON_EXHAUSTED = 'promo_exhausted';
