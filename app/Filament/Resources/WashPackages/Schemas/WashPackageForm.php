@@ -62,6 +62,15 @@ class WashPackageForm
                             ->suffix('SAR')
                             ->required(),
 
+                        TextInput::make('original_price')
+                            ->label(__('Original price (before discount)'))
+                            ->helperText(__('Optional. Shown struck through when higher than the price.'))
+                            ->numeric()
+                            ->step(0.01)
+                            ->minValue(0)
+                            ->suffix('SAR')
+                            ->gt('price'),
+
                         TextInput::make('duration_minutes')
                             ->label(__('Duration'))
                             ->numeric()

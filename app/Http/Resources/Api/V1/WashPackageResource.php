@@ -18,6 +18,11 @@ class WashPackageResource extends JsonResource
             'description_ar' => $this->description_ar,
             'type' => $this->type, // single | multi
             'price' => (float) $this->price,
+            // Pre-discount price, when the merchant set one above the price.
+            'original_price' => ($this->original_price !== null
+                    && (float) $this->original_price > (float) $this->price)
+                ? (float) $this->original_price
+                : null,
             'currency' => 'SAR',
             'duration_minutes' => (int) $this->duration_minutes,
             'visits_count' => $this->when($this->type === 'multi', fn () => (int) $this->visits_count),

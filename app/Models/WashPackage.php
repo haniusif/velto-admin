@@ -14,6 +14,7 @@ class WashPackage extends Model
         'description_ar',
         'type',
         'price',
+        'original_price',
         'duration_minutes',
         'required_skill_id',
         'dispatch_strategy',
@@ -27,6 +28,7 @@ class WashPackage extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'original_price' => 'decimal:2',
         'duration_minutes' => 'integer',
         'visits_count' => 'integer',
         'validity_days' => 'integer',

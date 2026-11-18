@@ -646,5 +646,7 @@
     "Worker arrived": "وصل العامل",
     "Job completed": "اكتمل العمل",
     "New customer signed up": "تسجيل عميل جديد",
-    "Save": "حفظ"
+    "Save": "حفظ",
+    "Original price (before discount)": "السعر قبل الخصم",
+    "Optional. Shown struck through when higher than the price.": "اختياري. يظهر مشطوبًا عندما يكون أعلى من السعر."
 }
