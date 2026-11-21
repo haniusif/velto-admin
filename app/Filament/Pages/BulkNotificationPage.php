@@ -8,6 +8,7 @@ use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Notifications\PushSender;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -80,7 +81,8 @@ class BulkNotificationPage extends Page
                                 self::AUDIENCE_ALL => __('All active customers'),
                             ])
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
 
                         Select::make('language')
                             ->label(__('Language'))
@@ -89,7 +91,8 @@ class BulkNotificationPage extends Page
                                 'ar' => __('Arabic'),
                                 'en' => __('English'),
                             ])
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
 
                         Select::make('city')
                             ->label(__('City'))
@@ -117,7 +120,8 @@ class BulkNotificationPage extends Page
                                 ->pluck('area', 'area')
                                 ->all())
                             ->searchable()
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
 
                         Select::make('gender')
                             ->label(__('Gender'))
@@ -126,7 +130,41 @@ class BulkNotificationPage extends Page
                                 'male' => __('Male'),
                                 'female' => __('Female'),
                             ])
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
+
+                        Select::make('subscription')
+                            ->label(__('Subscription'))
+                            ->placeholder(__('All'))
+                            ->options([
+                                'active' => __('Has active plan'),
+                                'none' => __('No active plan'),
+                            ])
+                            ->native(false)
+                            ->live(),
+
+                        Select::make('wallet')
+                            ->label(__('Wallet'))
+                            ->placeholder(__('All'))
+                            ->options([
+                                'has' => __('Has balance'),
+                                'none' => __('No balance'),
+                            ])
+                            ->native(false)
+                            ->live(),
+
+                        Placeholder::make('recipient_count')
+                            ->label(__('Recipients'))
+                            ->content(fn ($get): string => number_format($this->buildQuery([
+                                'audience' => $get('audience'),
+                                'language' => $get('language'),
+                                'city' => $get('city'),
+                                'area' => $get('area'),
+                                'gender' => $get('gender'),
+                                'subscription' => $get('subscription'),
+                                'wallet' => $get('wallet'),
+                            ])->count()).' '.__('customers'))
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make(__('Message'))
@@ -230,7 +268,18 @@ class BulkNotificationPage extends Page
      */
     protected function recipientQuery(): Builder
     {
-        $state = $this->form->getState();
+        return $this->buildQuery($this->form->getState());
+    }
+
+    /**
+     * Resolve an audience selection (base group + optional filters) to a
+     * customer query. Shared by the live recipient count, the confirmation
+     * count and the actual send, so all three can never disagree.
+     *
+     * @param  array<string,mixed>  $state
+     */
+    protected function buildQuery(array $state): Builder
+    {
         $query = Customer::query()->where('status', 'active');
 
         // Base group: everyone active, or only those with the app (push-capable).
@@ -248,6 +297,14 @@ class BulkNotificationPage extends Page
             ->when($state['area'] ?? null,
                 fn (Builder $q, $v) => $q->where('area', $v))
             ->when($state['gender'] ?? null,
-                fn (Builder $q, $v) => $q->where('gender', $v));
+                fn (Builder $q, $v) => $q->where('gender', $v))
+            ->when(($state['subscription'] ?? null) === 'active',
+                fn (Builder $q) => $q->whereHas('packages', fn ($p) => $p->where('status', 'active')))
+            ->when(($state['subscription'] ?? null) === 'none',
+                fn (Builder $q) => $q->whereDoesntHave('packages', fn ($p) => $p->where('status', 'active')))
+            ->when(($state['wallet'] ?? null) === 'has',
+                fn (Builder $q) => $q->where('wallet_balance', '>', 0))
+            ->when(($state['wallet'] ?? null) === 'none',
+                fn (Builder $q) => $q->where('wallet_balance', '<=', 0));
     }
 }

@@ -666,5 +666,9 @@
     "All cities": "كل المدن",
     "All areas": "كل الأحياء",
     "Any gender": "كل الأجناس",
-    "Start from a base group, then narrow it with any of the filters. They combine, and the send button shows the final recipient count. Only customers with the app installed can receive a push; everyone else still gets the in-app inbox message.": "ابدأ من مجموعة أساسية ثم ضيّقها بأي من الفلاتر. تتجمّع الفلاتر معًا، وزر الإرسال يعرض العدد النهائي للمستلمين. فقط من لديهم التطبيق يستقبلون إشعارًا فوريًا، والبقية يستقبلون الرسالة في بريد التطبيق."
+    "Start from a base group, then narrow it with any of the filters. They combine, and the send button shows the final recipient count. Only customers with the app installed can receive a push; everyone else still gets the in-app inbox message.": "ابدأ من مجموعة أساسية ثم ضيّقها بأي من الفلاتر. تتجمّع الفلاتر معًا، وزر الإرسال يعرض العدد النهائي للمستلمين. فقط من لديهم التطبيق يستقبلون إشعارًا فوريًا، والبقية يستقبلون الرسالة في بريد التطبيق.",
+    "Subscription": "الاشتراك",
+    "Has active plan": "لديه باقة نشطة",
+    "No active plan": "بلا باقة نشطة",
+    "customers": "عميل"
 }
