@@ -596,11 +596,8 @@ class AppointmentController extends Controller
             ]);
         }
 
-        if ($plan->vehicle_id !== $b['vehicle']->id) {
-            throw ValidationException::withMessages([
-                'customer_package_id' => ['This plan is locked to a different vehicle.'],
-            ]);
-        }
+        // A plan is a pool of prepaid washes, not tied to one car: a visit may
+        // be spent on any of the customer's vehicles, whichever is booked.
 
         if (! $plan->isUsable()) {
             throw ValidationException::withMessages([
