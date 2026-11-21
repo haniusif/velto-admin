@@ -648,5 +648,10 @@
     "New customer signed up": "تسجيل عميل جديد",
     "Save": "حفظ",
     "Original price (before discount)": "السعر قبل الخصم",
-    "Optional. Shown struck through when higher than the price.": "اختياري. يظهر مشطوبًا عندما يكون أعلى من السعر."
+    "Optional. Shown struck through when higher than the price.": "اختياري. يظهر مشطوبًا عندما يكون أعلى من السعر.",
+    "Most requested": "الأكثر طلبًا",
+    "Shows the \"most requested\" badge in the app.": "يُظهر شارة «الأكثر طلبًا» في التطبيق.",
+    "All packages": "كل الباقات",
+    "Active packages": "الباقات النشطة",
+    "Inactive packages": "الباقات غير النشطة"
 }

@@ -10,6 +10,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -61,10 +62,10 @@ class WashPackagesTable
                     ->badge()
                     ->color('primary'),
 
-                IconColumn::make('is_featured')
-                    ->label(__('Featured'))
-                    ->boolean()
-                    ->toggleable(),
+                // Editable inline so an admin can designate the most-requested
+                // package straight from the list, without opening the record.
+                ToggleColumn::make('is_featured')
+                    ->label(__('Most requested')),
 
                 IconColumn::make('is_active')
                     ->label(__('Active'))
@@ -78,11 +79,15 @@ class WashPackagesTable
                         'multi' => __('Multi-visit plan'),
                     ]),
 
+                // Active packages vs. all packages (and inactive, if needed).
                 TernaryFilter::make('is_active')
-                    ->label(__('Active')),
+                    ->label(__('Status'))
+                    ->placeholder(__('All packages'))
+                    ->trueLabel(__('Active packages'))
+                    ->falseLabel(__('Inactive packages')),
 
                 TernaryFilter::make('is_featured')
-                    ->label(__('Featured')),
+                    ->label(__('Most requested')),
             ])
             ->recordActions([
                 ViewAction::make(),

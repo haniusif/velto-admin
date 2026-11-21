@@ -112,7 +112,8 @@ class WashPackageForm
                     ->columns(3)
                     ->components([
                         Toggle::make('is_featured')
-                            ->label(__('Featured'))
+                            ->label(__('Most requested'))
+                            ->helperText(__('Shows the "most requested" badge in the app.'))
                             ->inline(false),
 
                         Toggle::make('is_active')
