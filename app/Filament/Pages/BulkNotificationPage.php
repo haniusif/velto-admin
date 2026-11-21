@@ -70,7 +70,7 @@ class BulkNotificationPage extends Page
         return $schema
             ->components([
                 Section::make(__('Audience'))
-                    ->description(__('Only customers with the app installed can receive a push. Everyone else still gets the in-app inbox message.'))
+                    ->description(__('Start from a base group, then narrow it with any of the filters. They combine, and the send button shows the final recipient count. Only customers with the app installed can receive a push; everyone else still gets the in-app inbox message.'))
                     ->columns(2)
                     ->components([
                         Select::make('audience')
@@ -78,24 +78,55 @@ class BulkNotificationPage extends Page
                             ->options([
                                 self::AUDIENCE_WITH_APP => __('Customers with the app installed'),
                                 self::AUDIENCE_ALL => __('All active customers'),
-                                self::AUDIENCE_CITY => __('Active customers in one city'),
                             ])
                             ->required()
-                            ->live()
+                            ->native(false),
+
+                        Select::make('language')
+                            ->label(__('Language'))
+                            ->placeholder(__('Any language'))
+                            ->options([
+                                'ar' => __('Arabic'),
+                                'en' => __('English'),
+                            ])
                             ->native(false),
 
                         Select::make('city')
                             ->label(__('City'))
+                            ->placeholder(__('All cities'))
                             ->options(fn (): array => Customer::query()
                                 ->whereNotNull('city')
+                                ->where('city', '!=', '')
                                 ->distinct()
                                 ->orderBy('city')
                                 ->pluck('city', 'city')
                                 ->all())
                             ->searchable()
                             ->native(false)
-                            ->required(fn ($get): bool => $get('audience') === self::AUDIENCE_CITY)
-                            ->visible(fn ($get): bool => $get('audience') === self::AUDIENCE_CITY),
+                            ->live(),
+
+                        Select::make('area')
+                            ->label(__('Area'))
+                            ->placeholder(__('All areas'))
+                            ->options(fn ($get): array => Customer::query()
+                                ->whereNotNull('area')
+                                ->where('area', '!=', '')
+                                ->when($get('city'), fn (Builder $q, $c) => $q->where('city', $c))
+                                ->distinct()
+                                ->orderBy('area')
+                                ->pluck('area', 'area')
+                                ->all())
+                            ->searchable()
+                            ->native(false),
+
+                        Select::make('gender')
+                            ->label(__('Gender'))
+                            ->placeholder(__('Any gender'))
+                            ->options([
+                                'male' => __('Male'),
+                                'female' => __('Female'),
+                            ])
+                            ->native(false),
                     ]),
 
                 Section::make(__('Message'))
@@ -202,10 +233,21 @@ class BulkNotificationPage extends Page
         $state = $this->form->getState();
         $query = Customer::query()->where('status', 'active');
 
-        return match ($state['audience'] ?? self::AUDIENCE_WITH_APP) {
-            self::AUDIENCE_WITH_APP => $query->whereHas('devices'),
-            self::AUDIENCE_CITY => $query->where('city', $state['city'] ?? null),
-            default => $query,
-        };
+        // Base group: everyone active, or only those with the app (push-capable).
+        if (($state['audience'] ?? self::AUDIENCE_WITH_APP) === self::AUDIENCE_WITH_APP) {
+            $query->whereHas('devices');
+        }
+
+        // Optional narrowing filters — each applies only when chosen, and they
+        // combine (AND) so the audience shrinks to the intersection.
+        return $query
+            ->when($state['language'] ?? null,
+                fn (Builder $q, $v) => $q->where('preferred_language', $v))
+            ->when($state['city'] ?? null,
+                fn (Builder $q, $v) => $q->where('city', $v))
+            ->when($state['area'] ?? null,
+                fn (Builder $q, $v) => $q->where('area', $v))
+            ->when($state['gender'] ?? null,
+                fn (Builder $q, $v) => $q->where('gender', $v));
     }
 }
