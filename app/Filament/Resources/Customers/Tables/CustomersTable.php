@@ -96,10 +96,24 @@ class CustomersTable
 
                 SelectFilter::make('city')
                     ->label(__('City'))
+                    ->searchable()
                     ->options(fn () => \App\Models\Customer::query()
-                        ->select('city')
+                        ->whereNotNull('city')
+                        ->where('city', '!=', '')
                         ->distinct()
+                        ->orderBy('city')
                         ->pluck('city', 'city')
+                        ->all()),
+
+                SelectFilter::make('area')
+                    ->label(__('Area'))
+                    ->searchable()
+                    ->options(fn () => \App\Models\Customer::query()
+                        ->whereNotNull('area')
+                        ->where('area', '!=', '')
+                        ->distinct()
+                        ->orderBy('area')
+                        ->pluck('area', 'area')
                         ->all()),
 
                 SelectFilter::make('gender')
