@@ -10,11 +10,15 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CustomersTable
 {
@@ -97,6 +101,42 @@ class CustomersTable
                         ->distinct()
                         ->pluck('city', 'city')
                         ->all()),
+
+                SelectFilter::make('gender')
+                    ->label(__('Gender'))
+                    ->options([
+                        'male' => __('Male'),
+                        'female' => __('Female'),
+                    ]),
+
+                TernaryFilter::make('profile_completed')
+                    ->label(__('Profile'))
+                    ->placeholder(__('All'))
+                    ->trueLabel(__('Completed'))
+                    ->falseLabel(__('Incomplete')),
+
+                TernaryFilter::make('wallet_balance')
+                    ->label(__('Wallet'))
+                    ->placeholder(__('All'))
+                    ->trueLabel(__('Has balance'))
+                    ->falseLabel(__('No balance'))
+                    ->queries(
+                        true: fn (Builder $query) => $query->where('wallet_balance', '>', 0),
+                        false: fn (Builder $query) => $query->where('wallet_balance', '<=', 0),
+                        blank: fn (Builder $query) => $query,
+                    ),
+
+                Filter::make('joined_at')
+                    ->label(__('Joined'))
+                    ->schema([
+                        DatePicker::make('joined_from')->label(__('Joined from')),
+                        DatePicker::make('joined_until')->label(__('Joined until')),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['joined_from'] ?? null,
+                            fn (Builder $q, $date) => $q->whereDate('joined_at', '>=', $date))
+                        ->when($data['joined_until'] ?? null,
+                            fn (Builder $q, $date) => $q->whereDate('joined_at', '<=', $date))),
             ])
             ->recordActions([
                 Action::make('topUp')

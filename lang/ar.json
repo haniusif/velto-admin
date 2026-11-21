@@ -653,5 +653,13 @@
     "Shows the \"most requested\" badge in the app.": "يُظهر شارة «الأكثر طلبًا» في التطبيق.",
     "All packages": "كل الباقات",
     "Active packages": "الباقات النشطة",
-    "Inactive packages": "الباقات غير النشطة"
+    "Inactive packages": "الباقات غير النشطة",
+    "Gender": "الجنس",
+    "Male": "ذكر",
+    "Female": "أنثى",
+    "Incomplete": "غير مكتمل",
+    "Has balance": "لديه رصيد",
+    "No balance": "بلا رصيد",
+    "Joined from": "الانضمام من",
+    "Joined until": "الانضمام حتى"
 }
