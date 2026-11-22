@@ -8,6 +8,7 @@ use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Notifications\PushSender;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -153,6 +154,16 @@ class BulkNotificationPage extends Page
                             ->native(false)
                             ->live(),
 
+                        DatePicker::make('joined_from')
+                            ->label(__('Joined from'))
+                            ->native(false)
+                            ->live(),
+
+                        DatePicker::make('joined_until')
+                            ->label(__('Joined until'))
+                            ->native(false)
+                            ->live(),
+
                         Placeholder::make('recipient_count')
                             ->label(__('Recipients'))
                             ->content(fn ($get): string => number_format($this->buildQuery([
@@ -163,6 +174,8 @@ class BulkNotificationPage extends Page
                                 'gender' => $get('gender'),
                                 'subscription' => $get('subscription'),
                                 'wallet' => $get('wallet'),
+                                'joined_from' => $get('joined_from'),
+                                'joined_until' => $get('joined_until'),
                             ])->count()).' '.__('customers'))
                             ->columnSpanFull(),
                     ]),
@@ -305,6 +318,10 @@ class BulkNotificationPage extends Page
             ->when(($state['wallet'] ?? null) === 'has',
                 fn (Builder $q) => $q->where('wallet_balance', '>', 0))
             ->when(($state['wallet'] ?? null) === 'none',
-                fn (Builder $q) => $q->where('wallet_balance', '<=', 0));
+                fn (Builder $q) => $q->where('wallet_balance', '<=', 0))
+            ->when($state['joined_from'] ?? null,
+                fn (Builder $q, $v) => $q->whereDate('joined_at', '>=', $v))
+            ->when($state['joined_until'] ?? null,
+                fn (Builder $q, $v) => $q->whereDate('joined_at', '<=', $v));
     }
 }
