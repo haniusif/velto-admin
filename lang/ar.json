@@ -670,5 +670,18 @@
     "Subscription": "الاشتراك",
     "Has active plan": "لديه باقة نشطة",
     "No active plan": "بلا باقة نشطة",
-    "customers": "عميل"
+    "customers": "عميل",
+    "Error log": "سجل الأخطاء",
+    "Errors only": "الأخطاء فقط",
+    "Errors & warnings": "الأخطاء والتحذيرات",
+    "All levels": "كل المستويات",
+    "Log file": "ملف السجل",
+    "Level": "المستوى",
+    "Refresh": "تحديث",
+    "Download file": "تنزيل الملف",
+    "No log files": "لا توجد ملفات سجل",
+    ":count entries shown": "عدد الإدخالات المعروضة: :count",
+    "Timestamps are shown exactly as written in the log file (server time).": "تُعرض الأوقات كما هي مكتوبة في ملف السجل (بتوقيت الخادم).",
+    "Nothing to show — no matching entries in this file. 🎉": "لا شيء لعرضه — لا توجد إدخالات مطابقة في هذا الملف. 🎉",
+    "No stack trace or context.": "لا يوجد أثر تتبّع أو سياق."
 }
